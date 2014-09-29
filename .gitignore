@@ -1,0 +1,11 @@
+*.iml
+*.ipr
+*.iws
+*.swp
+
+.idea
+.gradle
+build
+release/lib
+src/main/java/com/linkedin/cubert/antlr4/
+/bin
