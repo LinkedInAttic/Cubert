@@ -1,0 +1,110 @@
+.. (c) 2014 LinkedIn Corp. All rights reserved.
+ 
+	Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+	this file except in compliance with the License. You may obtain a copy of the
+	License at  http://www.apache.org/licenses/LICENSE-2.0
+	
+	Unless required by applicable law or agreed to in writing, software distributed
+	under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+	CONDITIONS OF ANY KIND, either express or implied.
+
+Aggregation Operators
+=========================
+
+GROUP BY
+-------------
+
+This operator computes group by aggregates on the input relation. Group by lets us specify the dimensions (or columns) on which the group bys are computed, the aggregation functions, the corresponding input columns, and optionally the names of the output columns of the computed aggregates. Group by operator supports SUM, COUNT, MIN, MAX, COUNT_DISTINCT and UDAFs (user defined aggregation functions).
+
+The output tuples from this operator will contain all the group by columns and also the output columns from the aggregation functions.
+
+Sample usages of GROUP BY operator.
+
+.. code-block:: java
+
+    // compute group by on two group by keys, compute sum aggregate on uniqueDaily and return the sum in a column named uniqueDailySum of type long
+    output = GROUP data BY country_sk, default_locale_sk AGGREGATES SUM(uniqueDaily) AS uniqueDailySum;
+
+    // compute multiple aggregates
+    output = GROUP data BY storeId AGGREGATES COUNT(tranId) AS tranCount, SUM(sales) AS totalSales;
+
+
+PRECONDITIONS: The input relation must be *partitioned* and *sorted* on the group by columns. For COUNT_DISTINCT aggregations, the input relation must be *partitioned* and *sorted* on concatenation of group by columns and the count distinct column.
+
+.. _cube-operator:
+
+CUBE
+-------
+This operator computes multiple group by over the input dataset. See :ref:`grouping-sets` on a discussion of the OLAP Cube and grouping sets.
+
+The operator can compute two kinds of aggregates: Additive and Partitioned-Additive (see :ref:`grouping-sets`).
+
+Additive Aggregates
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Cubert supports following builtin aggregators: SUM, COUNT, MIN, MAX.
+
+Example usage: computing a complete OLAP cube on two dimensions.
+
+.. code-block:: java
+
+       JOB "cube additive computing a full OLAP cube."
+       REDUCERS 10;
+       MAP {
+               // load the fact table
+               data = LOAD "$inputFactTable" USING AVRO;
+			   // compute "full" cube 
+               data = CUBE data BY dim0, dim1 AGGREGATES SUM(measure) AS sum;
+       }
+       SHUFFLE data PARTITIONED ON dim0, dim1 SORTED ON dim0, dim1 AGGREGATES SUM(measure) AS sum;
+       REDUCE {
+               result = GROUP data BY dim0, dim1 AGGREGATES SUM(sum) AS sum:long;
+       }
+       STORE result INTO "output/cube" USING AVRO;
+       END
+
+
+PRECONDITIONS: None.
+
+
+Partitioned Additive Aggregators
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+CUBE operator can also compute OLAP cube count distinct on the input relation. In its specification, it  takes the list of dimensions, the partitioning measure to compute count distinct on and the corresponding output column names.
+	
+Optionally the grouping sets can be specified, listing the group by key combinations to be computed. If no grouping sets is specified, the full OLAP cube is computed.
+
+.. code-block:: java
+
+    JOB "OLAP cube count distinct operator"
+    REDUCERS 10; 
+    MAP {
+        // load the fact table
+        data = LOAD "$inputFactTable" USING CubertStore;
+        data = FROM data GENERATE memberId, search_type, platform_type, country_sk, locale_sk, 
+                                  CASE (date_sk == "2014-02-06", memberId) AS todayMemberId;
+ 
+        // OLAP CCD computation on a grouping set
+        cube = CUBE data BY country_sk, locale_sk, search_type, platform_type INNER memberId 
+                        AGGREGATES COUNT_DISTINCT(memberId) AS uniqueWeekly:LONG, [SUM, COUNT_TO_ONE](todayMemberId) AS uniqueDaily
+                        GROUPING SETS (country_sk, locale_sk, search_type, platform_type),
+                                      (country_sk, locale_sk, search_type),
+                                      (country_sk, locale_sk, platform_type),
+                                      (country_sk, locale_sk);
+    }
+
+    SHUFFLE cube PARTITIONED ON country_sk, locale_sk, search_type, platform_type 
+                    SORTED ON country_sk, locale_sk, search_type, platform_type;                                                                                                                
+    REDUCE {
+            output = GROUP cube BY country_sk, locale_sk, search_type, platform_type 
+                        AGGREGATES SUM(uniqueWeekly) AS uniqueWeekly:long, SUM(uniqueDaily) AS uniqueDaily;
+    }   
+    STORE output INTO "$output/ccdOutput" USING AVRO; 
+    END
+
+
+.. note:: Using CUBE Shuffle Command
+
+	See the section on using the :ref:`CUBE shuffle command <cube-shuffle>` that describes a much compact (and less error prone) form for this operator.
+
+PRECONDITIONS: The input data must be *partitioned* and *sorted* on the measure (*memberId* in the above example).

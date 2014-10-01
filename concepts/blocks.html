@@ -1,0 +1,267 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Partitioned Blocks &mdash; Cubert 0.1.0 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="Cubert 0.1.0 documentation" href="../index.html"/>
+        <link rel="up" title="Understanding Cubert Concepts" href="index.html"/>
+        <link rel="next" title="Co-partitioned Blocks" href="coblocks.html"/>
+        <link rel="prev" title="Understanding Cubert Concepts" href="index.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="../index.html" class="fa fa-home"> Cubert</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installing Cubert</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../install.html#upgrading-cubert">Upgrading Cubert</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../wordcount.html">Our First Cubert Program</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../wordcount.html#the-cubert-map-reduce-cmr-script">The Cubert Map-Reduce (.cmr) Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../wordcount.html#parsing-and-compiling-the-script">Parsing and Compiling the Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../wordcount.html#running-the-script">Running the Script</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../cmr_language_reference.html">Cubert Map-Reduce Language Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../cmr_language_reference.html#structure-of-a-cubert-program">Structure of a Cubert Program</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cmr_language_reference.html#word-count-in-cubert">Word Count in Cubert</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Understanding Cubert Concepts</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="">Partitioned Blocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="coblocks.html">Co-partitioned Blocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rubixtool.html">Analyzing Rubix File with <em>rubixtool</em></a></li>
+<li class="toctree-l2"><a class="reference internal" href="grouping_sets.html">Aggregation: Cube and Grouping Sets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="conditions.html">Operator Preconditions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../operators/index.html">Cubert Operators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../operators/load_store.html">Input/Output Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/processing.html">Processing Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/builtin_functions.html">Builtin Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/join.html">Join Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/aggregation.html">Aggregation Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/dictionary.html">Dictionary Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/blocks.html">Block Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/shuffle.html">Shuffle Operators</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../userdefined/index.html">Extending Cubert</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/functions.html">User Defined Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/aggregations.html">User Defined Aggregation Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/operators.html">Adding new Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/storage.html">Adding new Storage Formats</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../patterns/index.html">Typical Patterns</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../patterns/union.html">UNION Pattern</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../javadoc.html">Javadoc</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../publications.html">Publications and Presentations</a></li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">Cubert</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="index.html">Understanding Cubert Concepts</a> &raquo;</li>
+      
+    <li>Partitioned Blocks</li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <div class="section" id="partitioned-blocks">
+<span id="id1"></span><h1>Partitioned Blocks<a class="headerlink" href="#partitioned-blocks" title="Permalink to this headline">¶</a></h1>
+<p>Let consider a pageviews tracking dataset, consisting of three columns: <em>memberId</em> (int), <em>pagekey</em> (string) and <em>timestamp</em> (long). And as it is usually the case, the data is spread out in multiple files (part-00000.avro, part-00001.avro, etc) within a folder, and not partitioned or sorted in any particular way.</p>
+<p>In contract, the Cubert paradigm of computation encourages the data to be stored in more structured fashion. In particular, we would like to partition the data (on some <em>partition keys</em>) into data units, called <strong>Partitioned Blocks</strong> or simply blocks. Further, we would like each block of data to be sorted on some columns (these <em>sort keys</em> may be different from partition keys). This process of transforming the &#8216;raw&#8217; dataset into partitioned and sorted data units is called <strong>BLOCKGEN</strong>. This process is depicted below.</p>
+<div class="figure align-center">
+<a class="reference internal image-reference" href="../_images/blockgen.png"><img alt="../_images/blockgen.png" src="../_images/blockgen.png" style="width: 400pt;" /></a>
+</div>
+<div class="section" id="blockgen-checklist">
+<h2>BLOCKGEN Checklist<a class="headerlink" href="#blockgen-checklist" title="Permalink to this headline">¶</a></h2>
+<p>As a user of Cubert, we are responsible for the following four actions for BLOCKGEN:</p>
+<ol class="arabic">
+<li><p class="first">Defining Partition Keys: the columns along which the dataset is to be partitioned.</p>
+<blockquote>
+<div><p>For example, lets say we chose to partition the pageviews tracking dataset above along <em>memberId</em>. In this case, all rows for a given memberId, say memberId=1234, will be present in only one block.</p>
+</div></blockquote>
+</li>
+<li><p class="first">(Optional) Defining Sorting Keys: the columns along with <em>each block</em> is sorted.</p>
+<blockquote>
+<div><p>Note that sorting happens <em>within the blocks</em>. That is, the data is NOT globally sorted. For example, say we can choose the blocks partitioned on memberId to be sorted on timestamp.</p>
+</div></blockquote>
+</li>
+<li><p class="first">Defining Cost Function: to specify the size of the blocks.</p>
+<blockquote>
+<div><p>There are three ways we can control the size of the blocks:</p>
+<ul class="simple">
+<li>By ROW: each block should have the specified number of rows.</li>
+<li>By PARTITION KEYS: each block should have specified number of partition keys. This cost function will be same as BY ROW, if the partition keys is the primary key as well (that is, only only row per partition key).</li>
+<li>By SIZE: each block should have specified number of bytes.</li>
+</ul>
+</div></blockquote>
+</li>
+<li><p class="first">Storing the BLOCKGEN data in CubertStore file format: the dataset organized into blocks MUST be stored in CubertStore file format.</p>
+<blockquote>
+<div><p>CubertStore supports a custom data layout format that embeds indices and other metadata related to the BLOCKGEN process.</p>
+</div></blockquote>
+</li>
+</ol>
+</div>
+<div class="section" id="creating-partitioned-blocks">
+<h2>Creating Partitioned Blocks<a class="headerlink" href="#creating-partitioned-blocks" title="Permalink to this headline">¶</a></h2>
+<p>The blocks are created using the BLOCKGEN shuffle command, discussed in detail <a class="reference internal" href="../operators/shuffle.html#blockgen"><em>here</em></a>. And example is shown below:</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="n">JOB</span> <span class="s">&quot;our first BLOCKGEN&quot;</span>
+        <span class="n">REDUCERS</span> <span class="mi">10</span><span class="o">;</span>
+        <span class="n">MAP</span> <span class="o">{</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;/path/to/data&quot;</span> <span class="n">USING</span> <span class="n">AVRO</span><span class="o">();</span>
+        <span class="o">}</span>
+        <span class="c1">// Create blocks that are (a) partitioned on memberId, (b) sorted on timestamp, and</span>
+        <span class="c1">// (c) have a size of 1000 rows</span>
+        <span class="n">BLOCKGEN</span> <span class="n">data</span> <span class="n">BY</span> <span class="n">ROW</span> <span class="mi">1000</span> <span class="n">PARTITIONED</span> <span class="n">ON</span> <span class="n">memberId</span> <span class="n">SORTED</span> <span class="n">ON</span> <span class="n">timestamp</span><span class="o">;</span>
+
+        <span class="c1">// ALWAYS store BLOCKGEN data using CubertStore file format!</span>
+        <span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;/path/to/output&quot;</span> <span class="n">USING</span> <span class="n">CubertStore</span><span class="o">();</span>
+<span class="n">END</span>
+</pre></div>
+</div>
+<p>Note that there will be 10 data files (part-r-00000.rbx through part-r-00009.rbx), since we assigned as many number of reducers. That is to say, the CubertStore file can store more than one block in a single file. So don&#8217;t worry about the file count quota when creating 1000&#8217;s of blocks!</p>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="coblocks.html" class="btn btn-neutral float-right" title="Co-partitioned Blocks"/>Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral" title="Understanding Cubert Concepts"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2014, LinkedIn Cubert Team.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

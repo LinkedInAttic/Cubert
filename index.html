@@ -1,6 +1,309 @@
-<html>
 
-<body>
-Cubert Documentation
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Welcome to Cubert! &mdash; Cubert 0.1.0 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="Cubert 0.1.0 documentation" href="#"/>
+        <link rel="next" title="Installing Cubert" href="install.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="#" class="fa fa-home"> Cubert</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installing Cubert</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="install.html#upgrading-cubert">Upgrading Cubert</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="wordcount.html">Our First Cubert Program</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wordcount.html#the-cubert-map-reduce-cmr-script">The Cubert Map-Reduce (.cmr) Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wordcount.html#parsing-and-compiling-the-script">Parsing and Compiling the Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wordcount.html#running-the-script">Running the Script</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cmr_language_reference.html">Cubert Map-Reduce Language Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="cmr_language_reference.html#structure-of-a-cubert-program">Structure of a Cubert Program</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cmr_language_reference.html#word-count-in-cubert">Word Count in Cubert</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="concepts/index.html">Understanding Cubert Concepts</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="concepts/blocks.html">Partitioned Blocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="concepts/coblocks.html">Co-partitioned Blocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="concepts/rubixtool.html">Analyzing Rubix File with <em>rubixtool</em></a></li>
+<li class="toctree-l2"><a class="reference internal" href="concepts/grouping_sets.html">Aggregation: Cube and Grouping Sets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="concepts/conditions.html">Operator Preconditions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="operators/index.html">Cubert Operators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="operators/load_store.html">Input/Output Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operators/processing.html">Processing Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operators/builtin_functions.html">Builtin Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operators/join.html">Join Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operators/aggregation.html">Aggregation Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operators/dictionary.html">Dictionary Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operators/blocks.html">Block Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operators/shuffle.html">Shuffle Operators</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="userdefined/index.html">Extending Cubert</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="userdefined/functions.html">User Defined Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="userdefined/aggregations.html">User Defined Aggregation Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="userdefined/operators.html">Adding new Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="userdefined/storage.html">Adding new Storage Formats</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="patterns/index.html">Typical Patterns</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="patterns/union.html">UNION Pattern</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="javadoc.html">Javadoc</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publications.html">Publications and Presentations</a></li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="#">Cubert</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="#">Docs</a> &raquo;</li>
+      
+    <li>Welcome to Cubert!</li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <div class="section" id="welcome-to-cubert">
+<h1>Welcome to Cubert!<a class="headerlink" href="#welcome-to-cubert" title="Permalink to this headline">¶</a></h1>
+<p><strong>Cubert is a fast and efficient batch computation engine for complex analysis and reporting of massive datasets on Hadoop</strong>.</p>
+<div class="section" id="where-can-i-use-cubert">
+<h2>Where can I use Cubert?<a class="headerlink" href="#where-can-i-use-cubert" title="Permalink to this headline">¶</a></h2>
+<p>Cubert is ideally suited for the following application domains:</p>
+<ol class="arabic">
+<li><p class="first"><strong>Statistical Calculations, Joins and Aggregations</strong></p>
+<blockquote>
+<div><p>Cubert introduces a new model of computation that allows users to organize data in a format  that is ideally suited for scalable  execution of subsequent query processing operators, and a set of <strong>algorithmically-efficient</strong> operators (MeshJoin and CUBE) that exploit the organization to provide significantly improved CPU and resource utilization compared to existing solutions.</p>
+</div></blockquote>
+</li>
+<li><p class="first"><strong>Cubes and Grouping Set Aggregations</strong></p>
+<blockquote>
+<div><p>The power-horse is the new CUBE operator that can efficiently (CPU and memory) compute additive, non-additive (e.g. Count Distinct) and exact percentile rank (e.g. Median) statistics; can roll up inner dimensions on-the-fly and compute multiple measures within a single job.</p>
+</div></blockquote>
+</li>
+<li><p class="first"><strong>Time range calculation and Incremental computations</strong></p>
+<blockquote>
+<div><p>Cubert primitives are specially suited for reporting workflows that employ computation pattern that is both regular and repetitive, allowing for efficiency gains from partial result caching and incremental processing.</p>
+</div></blockquote>
+</li>
+<li><p class="first"><strong>Graph computations</strong></p>
+<blockquote>
+<div><p>Cubert provides a novel sparse matrix multiplication algorithm that is best suited for analytics with large-scale graphs.</p>
+</div></blockquote>
+</li>
+<li><p class="first"><strong>When performance or resources are a matter of concern</strong></p>
+<blockquote>
+<div><p>Cubert Script is a developer-friendly language that takes out the hints, guesswork and surprises when running the script. The script provides the developers complete control over the execution plan (without resorting to low-level programming!), and is extremely extensible by adding new functions, aggregators and even operators.</p>
+</div></blockquote>
+</li>
+</ol>
+</div>
+<div class="section" id="how-is-cubert-different">
+<h2>How is Cubert different?<a class="headerlink" href="#how-is-cubert-different" title="Permalink to this headline">¶</a></h2>
+<div class="figure align-center">
+<a class="reference internal image-reference" href="_images/cubert-design.jpg"><img alt="_images/cubert-design.jpg" src="_images/cubert-design.jpg" style="width: 400pt;" /></a>
+</div>
+</div>
+<div class="section" id="a-flavor-of-cubert-script">
+<h2>A flavor of Cubert Script<a class="headerlink" href="#a-flavor-of-cubert-script" title="Permalink to this headline">¶</a></h2>
+<p>Cubert script is a <em>physical</em> script where we explicitly define the operators at the Mappers, Reducers and Combiners for the different jobs. Following is an example of the Word Count problem written in cubert script.</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="n">JOB</span> <span class="s">&quot;word count job&quot;</span>
+    <span class="n">REDUCERS</span> <span class="mi">10</span><span class="o">;</span>
+    <span class="n">MAP</span> <span class="o">{</span>
+        <span class="c1">// load the input data set as a TEXT file</span>
+        <span class="n">input</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;$CUBERT_HOME/examples/words.txt&quot;</span> <span class="n">USING</span> <span class="n">TEXT</span><span class="o">(</span><span class="s">&quot;schema&quot;</span><span class="o">:</span> <span class="s">&quot;STRING word&quot;</span><span class="o">);</span>
+        <span class="c1">// add a column to each tuple</span>
+        <span class="n">with_count</span> <span class="o">=</span> <span class="n">FROM</span> <span class="n">input</span> <span class="n">GENERATE</span> <span class="n">word</span><span class="o">,</span> <span class="mi">1L</span> <span class="n">AS</span> <span class="n">count</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="c1">// shuffle the data and also invoke combiner to aggregate on map-side</span>
+    <span class="n">SHUFFLE</span> <span class="n">with_count</span> <span class="n">PARTITIONED</span> <span class="n">ON</span> <span class="n">word</span> <span class="n">AGGREGATES</span> <span class="nf">COUNT</span><span class="o">(</span><span class="n">count</span><span class="o">)</span> <span class="n">AS</span> <span class="n">count</span><span class="o">;</span>
+    <span class="n">REDUCE</span> <span class="o">{</span>
+        <span class="c1">// at the reducers, sum the counts for each word</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">GROUP</span> <span class="n">with_count</span> <span class="n">BY</span> <span class="n">word</span> <span class="n">AGGREGATES</span> <span class="n">SUM</span><span class="o">(</span><span class="n">count</span><span class="o">)</span> <span class="n">AS</span> <span class="n">count</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="c1">// store the output using TEXT format</span>
+    <span class="n">STORE</span> <span class="n">output</span> <span class="n">INTO</span> <span class="s">&quot;output&quot;</span> <span class="n">USING</span> <span class="n">TEXT</span><span class="o">();</span>
+<span class="n">END</span>
+</pre></div>
+</div>
+<p>While the Cubert Script code above is already very concise representation of the Word Count problem; as a matter of interest, the idiomatic way of writing in Cubert is even more concise (and a lot faster)!</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="n">JOB</span> <span class="s">&quot;idiomatic word count program (even more concise!)&quot;</span>
+        <span class="n">REDUCERS</span> <span class="mi">10</span><span class="o">;</span>
+        <span class="n">MAP</span> <span class="o">{</span>
+                <span class="n">input</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;$CUBERT_HOME/examples/words.txt&quot;</span> <span class="n">USING</span> <span class="n">TEXT</span><span class="o">(</span><span class="s">&quot;schema&quot;</span><span class="o">:</span> <span class="s">&quot;STRING word&quot;</span><span class="o">);</span>
+        <span class="o">}</span>
+        <span class="n">CUBE</span> <span class="n">input</span> <span class="n">BY</span> <span class="n">word</span> <span class="n">AGGREGATES</span> <span class="nf">COUNT</span><span class="o">(</span><span class="n">word</span><span class="o">)</span> <span class="n">AS</span> <span class="n">count</span> <span class="n">GROUPING</span> <span class="n">SETS</span> <span class="o">(</span><span class="n">word</span><span class="o">);</span>
+        <span class="n">STORE</span> <span class="n">input</span> <span class="n">INTO</span> <span class="s">&quot;output&quot;</span> <span class="n">USING</span> <span class="n">TEXT</span><span class="o">();</span>
+<span class="n">END</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="cubert-performance-summary">
+<h2>Cubert Performance Summary<a class="headerlink" href="#cubert-performance-summary" title="Permalink to this headline">¶</a></h2>
+<div class="figure align-center">
+<a class="reference internal image-reference" href="_images/perf-summary.png"><img alt="_images/perf-summary.png" src="_images/perf-summary.png" style="width: 400pt;" /></a>
+</div>
+</div>
+<div class="section" id="coming-really-soon">
+<h2>Coming (really) soon..<a class="headerlink" href="#coming-really-soon" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><strong>Tez and Spark execution engine</strong>: the existing cubert scripts (written in Map-Reduce paradigm) can run <em>unmodified</em> on underlying Tez/Spark engine.</li>
+<li><strong>Cubert Script v2</strong>: a DAG oriented language to express complex composition of workflows.</li>
+<li><strong>Incremental computations</strong>: daily running jobs that read multiple days of data can materialize partial output and incrementally compute the results (thus cutting down on resources and time).</li>
+<li><strong>Analytical window functions</strong>.</li>
+</ul>
+</div>
+<div class="section" id="cubert-documentation">
+<h2>Cubert Documentation<a class="headerlink" href="#cubert-documentation" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installing Cubert</a></li>
+<li class="toctree-l1"><a class="reference internal" href="wordcount.html">Our First Cubert Program</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cmr_language_reference.html">Cubert Map-Reduce Language Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="concepts/index.html">Understanding Cubert Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operators/index.html">Cubert Operators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="userdefined/index.html">Extending Cubert</a></li>
+<li class="toctree-l1"><a class="reference internal" href="patterns/index.html">Typical Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="javadoc.html">Javadoc</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publications.html">Publications and Presentations</a></li>
+</ul>
+</div>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="install.html" class="btn btn-neutral float-right" title="Installing Cubert"/>Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2014, LinkedIn Cubert Team.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
 </body>
 </html>

@@ -1,0 +1,92 @@
+.. (c) 2014 LinkedIn Corp. All rights reserved.
+ 
+	Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+	this file except in compliance with the License. You may obtain a copy of the
+	License at  http://www.apache.org/licenses/LICENSE-2.0
+	
+	Unless required by applicable law or agreed to in writing, software distributed
+	under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+	CONDITIONS OF ANY KIND, either express or implied.
+
+.. _builtin-functions:
+
+Builtin Functions
+====================
+
+Arithmetic Functions
+~~~~~~~~~~~~~~~~~~~~
+
+Cubert supports following functions
+
+* \+ (add)
+* \- (subtract)
+* \* (multiply)
+* / (divide)
+* MOD(a, b)
+* LSHIFT(a, b)
+
+Note: if any of the operands are null, the output of these functions is also null.
+
+Boolean Functions
+--------------------
+
+Cubert supports following functions.
+
+* a == b. Returns null if *any* argument is null. (that is, null == 10 is null, null == null is null).
+* a != b. Returns null if *any* argument is null. (that is, null != 10 is null, null != null is null).
+* a < b. Returns null if *any* argument is null.
+* a <= b. Returns null if *any* argument is null.
+* a > b. Returns null if *any* argument is null.
+* a >= b. Returns null if *any* argument is null.
+* a AND b. Nulls are treated as 'false'.
+* a OR b. Nulls are treated as 'false'.
+* a IS NULL. 
+* a IS NOT NULL.
+* a IN ("string1", "string2", ...). Returns false if the argument is null.
+
+
+CASE
+~~~~~~
+
+CASE function is used to implement a series of if/else statements and it is used as a part of GENERATE. CASE is akin to the switch statements in Java: It take a series of predicates and the corresponding output value. These predicates are evaluated in the input order.
+
+For instance, the following sample outputs the input country_code if it is "cn," "us," "in," or "br," and generates "other" in all other cases::
+
+	filtered = FROM input GENERATE id, connection_count as cc, CASE(country_code IN ("cn", "us", "in", "br"), country_code, true, "other") AS country_code;
+
+If no conditions match, the default value returned by CASE function is NULL.
+
+
+MATCHES
+~~~~~~~~
+
+MATCHES is a boolean function used for regular expression matching. For instance, to apply a filter based on if a field matches a regular expression, we can use this function as follows::
+
+	filtered = FILTER data BY platform_sk > 1 AND page_key MATCHES ".*search_tap.*" AND NOT (page_key MATCHES ".*filter.*");
+
+
+
+IF-ELSE Functions
+~~~~~~~~~~~~~~~~~~~~~
+
+NVL function can be used to replace NULLs with default values. If the field is not null, the value is returned as it is.
+
+	generated = FROM data GENERATE NVL(country_sk, -9) AS country_sk, NVL(locale_sk, -9) AS locale_sk;
+
+
+
+CAST Functions
+~~~~~~~~~~~~~~~
+
+CAST functions can be used to cast a field of a certain type to an expected type. The variants supported are: 
+
+* CASTTOINT(a)
+* CASTTOLONG(a)
+* CASTTOFLOAT(a)
+* CASTTODOUBLE(a)
+* CASTOSTRING(a). 
+
+For casting to numerical types, the input can be a number or a string (in which case, Double.parseDouble() etc methods are used to parse the string).
+
+CASTTOSTRING() accepts arguments of any type, and the *toString()* method is used to get the string representation.
+

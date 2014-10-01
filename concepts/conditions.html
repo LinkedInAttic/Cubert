@@ -1,0 +1,340 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Operator Preconditions &mdash; Cubert 0.1.0 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="Cubert 0.1.0 documentation" href="../index.html"/>
+        <link rel="up" title="Understanding Cubert Concepts" href="index.html"/>
+        <link rel="next" title="Cubert Operators" href="../operators/index.html"/>
+        <link rel="prev" title="Aggregation: Cube and Grouping Sets" href="grouping_sets.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="../index.html" class="fa fa-home"> Cubert</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installing Cubert</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../install.html#upgrading-cubert">Upgrading Cubert</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../wordcount.html">Our First Cubert Program</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../wordcount.html#the-cubert-map-reduce-cmr-script">The Cubert Map-Reduce (.cmr) Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../wordcount.html#parsing-and-compiling-the-script">Parsing and Compiling the Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../wordcount.html#running-the-script">Running the Script</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../cmr_language_reference.html">Cubert Map-Reduce Language Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../cmr_language_reference.html#structure-of-a-cubert-program">Structure of a Cubert Program</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cmr_language_reference.html#word-count-in-cubert">Word Count in Cubert</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Understanding Cubert Concepts</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="blocks.html">Partitioned Blocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="coblocks.html">Co-partitioned Blocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rubixtool.html">Analyzing Rubix File with <em>rubixtool</em></a></li>
+<li class="toctree-l2"><a class="reference internal" href="grouping_sets.html">Aggregation: Cube and Grouping Sets</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">Operator Preconditions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../operators/index.html">Cubert Operators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../operators/load_store.html">Input/Output Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/processing.html">Processing Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/builtin_functions.html">Builtin Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/join.html">Join Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/aggregation.html">Aggregation Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/dictionary.html">Dictionary Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/blocks.html">Block Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/shuffle.html">Shuffle Operators</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../userdefined/index.html">Extending Cubert</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/functions.html">User Defined Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/aggregations.html">User Defined Aggregation Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/operators.html">Adding new Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/storage.html">Adding new Storage Formats</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../patterns/index.html">Typical Patterns</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../patterns/union.html">UNION Pattern</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../javadoc.html">Javadoc</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../publications.html">Publications and Presentations</a></li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">Cubert</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="index.html">Understanding Cubert Concepts</a> &raquo;</li>
+      
+    <li>Operator Preconditions</li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <div class="section" id="operator-preconditions">
+<span id="preconditions"></span><h1>Operator Preconditions<a class="headerlink" href="#operator-preconditions" title="Permalink to this headline">¶</a></h1>
+<p>At its core, Cubert MapReduce Script is really a <em>physical langauge</em> &#8211; it give us the freedom and the power to structure the computation as we see fit, but as a consequence, it also becomes our responsibility to ensure that we structure the computation in a way that is meaningful. The primary to ensure that we are using Cubert operators correctly is to satisfy the <strong>Operator Preconditions</strong>. The precondition comprises of two pieces of information: how is the data <em>partitioned</em>, and how is the data <em>sorted</em>. Each Cubert operator specify what precondition it expects in its input data, and as a Cubert Script user, we have to ensure that those preconditions are actually met when we use the said operator. The <a class="reference internal" href="../operators/index.html#operators"><em>Cubert Operators</em></a> section lists all the operator supported by Cubert, and for each operator it specifies what preconditions are expected.</p>
+<p>We will start this section with an example to understand the concepts of partition key and sort key based preconditions.</p>
+<div class="section" id="example-preconditions-for-cube-operator">
+<h2>Example: Preconditions for CUBE operator<a class="headerlink" href="#example-preconditions-for-cube-operator" title="Permalink to this headline">¶</a></h2>
+<p>In the previous section (<a class="reference internal" href="grouping_sets.html#grouping-sets"><em>Aggregation: Cube and Grouping Sets</em></a>) we noted that in order to compute Partitioned-Additive aggregates in the CUBE operator, the input data must be sorted and partitioned on the measure column (see the PRECONDITION in <a class="reference internal" href="../operators/aggregation.html#cube-operator"><em>CUBE operator documentation</em></a>). In this section, we will use the CUBE operator with different preconditions to the input data and see what happens.</p>
+<div class="section" id="precondition-error-1-data-is-not-partitioned">
+<h3>Precondition Error #1: Data is not partitioned<a class="headerlink" href="#precondition-error-1-data-is-not-partitioned" title="Permalink to this headline">¶</a></h3>
+<p>Lets make the first attempt by reading the data directly from Avro files (the data is not partitioned or sorted), as follows:</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="c1">// script1.cmr</span>
+<span class="n">JOB</span> <span class="s">&quot;CUBE operator on AVRO data&quot;</span>
+        <span class="n">REDUCERS</span> <span class="mi">1</span><span class="o">;</span>
+        <span class="n">MAP</span> <span class="o">{</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;$input&quot;</span> <span class="n">USING</span> <span class="n">AVRO</span><span class="o">;</span> <span class="c1">// schema: dim0:INT, dim1:INT, memberId:LONG</span>
+        <span class="o">}</span>
+        <span class="c1">// PRECONDITION ERROR. The data is not partitioned on memberId</span>
+        <span class="n">CUBE</span> <span class="n">data</span> <span class="n">BY</span> <span class="n">dim0</span><span class="o">,</span> <span class="n">dim1</span> <span class="n">INNER</span> <span class="n">memberId</span> <span class="n">AGGREGATES</span> <span class="n">COUNT_DISTINCT</span><span class="o">(</span><span class="n">memberId</span><span class="o">)</span> <span class="n">AS</span> <span class="n">count</span><span class="o">;</span>
+        <span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;$output&quot;</span> <span class="n">USING</span> <span class="n">AVRO</span><span class="o">;</span>
+<span class="n">END</span>
+</pre></div>
+</div>
+<p>The data is not partitioned on memberId when we call the CUBE operator, and indeed the cubert command will point out this error during compilation.</p>
+<div class="highlight-bash"><div class="highlight"><pre>&gt; <span class="nv">$CUBERT</span>/bin/cubert script1.cmr
+Analyzing job <span class="o">[</span>CUBE operator on AVRO data<span class="o">]</span>...
+ERROR: PreconditionException <span class="o">[</span>INVALID_PARTITION_KEYS<span class="o">]</span> <span class="nv">Found</span><span class="o">=</span>null. <span class="nv">Expected</span><span class="o">=[</span>memberId<span class="o">]</span>
+At:     <span class="o">[</span>MAP<span class="o">]</span> CUBE data BY dim0, dim1 PARTITIONED ON memberId AGGREGATES COUNT_DISTINCT<span class="o">(</span>memberId<span class="o">)</span> AS count;
+
+Cannot compile cubert script. Exiting.
+</pre></div>
+</div>
+<p>The above tells us that Cubert cannot compile this script because: (a) the CUBE operator requires that the data is partitioned on memberId, and (b) the data we actually provided was not partitioned at all.</p>
+<p>BLOCKGEN is the process to partition the data (see <a class="reference internal" href="../operators/shuffle.html#blockgen"><em>BLOCKGEN</em></a>), which we should use to partition the data first.</p>
+</div>
+<div class="section" id="precondition-error-2-data-incorrectly-partitioned">
+<h3>Precondition Error #2: Data incorrectly partitioned<a class="headerlink" href="#precondition-error-2-data-incorrectly-partitioned" title="Permalink to this headline">¶</a></h3>
+<p>This time we will add a job to partition the job (using BLOCKGEN), but to make things interesting we will partition it on wrong columns.</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="c1">// script2.cmr</span>
+<span class="n">JOB</span> <span class="s">&quot;partition the data (incorrectly)&quot;</span>
+        <span class="n">REDUCERS</span> <span class="mi">1</span><span class="o">;</span>
+        <span class="n">MAP</span> <span class="o">{</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;$input&quot;</span> <span class="n">USING</span> <span class="n">AVRO</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="n">BLOCKGEN</span> <span class="n">data</span> <span class="n">BY</span> <span class="n">ROW</span> <span class="mi">1000</span> <span class="n">PARTITIONED</span> <span class="n">ON</span> <span class="n">dim0</span><span class="o">;</span> <span class="c1">// &lt;== PROBLEM. We should have been partitioning on memberId</span>
+        <span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;tmp&quot;</span> <span class="n">USING</span> <span class="n">CubertStore</span><span class="o">;</span>
+<span class="n">END</span>
+
+<span class="n">JOB</span> <span class="s">&quot;CUBE operator on CubertStore data&quot;</span>
+        <span class="n">REDUCERS</span> <span class="mi">1</span><span class="o">;</span>
+        <span class="n">MAP</span> <span class="o">{</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;tmp&quot;</span> <span class="n">USING</span> <span class="n">CubertStore</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="c1">// PRECONDITION ERROR. The data is not partitioned on memberId (it is partitioned on dim0)</span>
+        <span class="n">CUBE</span> <span class="n">data</span> <span class="n">BY</span> <span class="n">dim0</span><span class="o">,</span> <span class="n">dim1</span> <span class="n">PARTITIONED</span> <span class="n">ON</span> <span class="n">memberId</span> <span class="n">AGGREGATES</span> <span class="n">COUNT_DISTINCT</span><span class="o">(</span><span class="n">memberId</span><span class="o">)</span> <span class="n">AS</span> <span class="n">count</span><span class="o">;</span>
+        <span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;$output&quot;</span> <span class="n">USING</span> <span class="n">AVRO</span><span class="o">;</span>
+<span class="n">END</span>
+</pre></div>
+</div>
+<p>And indeed the precondition error will be reported by cubert:</p>
+<div class="highlight-bash"><div class="highlight"><pre>&gt; <span class="nv">$CUBERT_HOME</span>/bin/cubert script2.cmr
+Analyzing job <span class="o">[</span>CUBE operator on CubertStore data<span class="o">]</span>...
+ERROR: PreconditionException <span class="o">[</span>INVALID_PARTITION_KEYS<span class="o">]</span> <span class="nv">Found</span><span class="o">=[</span>dim0<span class="o">]</span>. <span class="nv">Expected</span><span class="o">=[</span>memberId<span class="o">]</span>
+At:     <span class="o">[</span>MAP<span class="o">]</span> CUBE data BY dim0, dim1 PARTITIONED ON memberId AGGREGATES COUNT_DISTINCT<span class="o">(</span>memberId<span class="o">)</span> AS count;
+
+Cannot compile cubert script. Exiting.
+</pre></div>
+</div>
+</div>
+<div class="section" id="precondition-error-3-data-incorrectly-sorted">
+<h3>Precondition Error #3: Data incorrectly sorted<a class="headerlink" href="#precondition-error-3-data-incorrectly-sorted" title="Permalink to this headline">¶</a></h3>
+<p>This time we will partition the data correctly, but sort it on different columns.</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="c1">// script3.cmr</span>
+<span class="n">JOB</span> <span class="s">&quot;partition the data (correct partition, but wrong sort key)&quot;</span>
+        <span class="n">REDUCERS</span> <span class="mi">1</span><span class="o">;</span>
+        <span class="n">MAP</span> <span class="o">{</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;$input&quot;</span> <span class="n">USING</span> <span class="n">AVRO</span><span class="o">;</span>
+        <span class="o">}</span>
+        <span class="n">BLOCKGEN</span> <span class="n">data</span> <span class="n">BY</span> <span class="n">ROW</span> <span class="mi">1000</span> <span class="n">PARTITIONED</span> <span class="n">ON</span> <span class="n">memberId</span> <span class="n">SORTED</span> <span class="n">ON</span> <span class="n">dim0</span><span class="o">;</span> <span class="c1">// &lt;== PROBLEM. We should have been sorting on memberId</span>
+        <span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;tmp&quot;</span> <span class="n">USING</span> <span class="n">CubertStore</span><span class="o">;</span>
+<span class="n">END</span>
+
+<span class="c1">// the second job same as before</span>
+</pre></div>
+</div>
+<p>This time we will get a different precondition error:</p>
+<div class="highlight-bash"><div class="highlight"><pre>&gt; <span class="nv">$CUBERT</span>/bin/cubert script3.cmr
+Analyzing job <span class="o">[</span>CUBE operator on AVRO data<span class="o">]</span>...
+ERROR: PreconditionException <span class="o">[</span>INVALID_SORT_KEYS<span class="o">]</span> <span class="nv">Found</span><span class="o">=[</span>dim0<span class="o">]</span>. <span class="nv">Expected</span><span class="o">=[</span>memberId<span class="o">]</span>
+At:     <span class="o">[</span>MAP<span class="o">]</span> CUBE data BY dim0, dim1 PARTITIONED ON memberId AGGREGATES COUNT_DISTINCT<span class="o">(</span>memberId<span class="o">)</span> AS count;
+
+Cannot compile cubert script. Exiting.
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="inspecting-operator-precondition-in-the-script">
+<h2>Inspecting Operator Precondition in the Script<a class="headerlink" href="#inspecting-operator-precondition-in-the-script" title="Permalink to this headline">¶</a></h2>
+<p>We can look at the partition and sort keys of the data before and after each operator in the Cubert script by setting the <em>-d</em> (<em>&#8211;debug</em>) flag in command line. The following is an excerpt from the script3.cmr above (the one with incorrect sort keys).</p>
+<div class="highlight-bash"><div class="highlight"><pre>Analyzing job <span class="o">[</span>partition the data <span class="o">(</span>incorrectly<span class="o">)]</span>...
+---------------------------------------------
+<span class="o">[</span>REDUCE<span class="o">]</span> BLOCKGEN data BY ROW 1000 PARTITIONED ON memberId SORTED ON dim0;
+
+Precondition <span class="k">for </span>data
+        Schema: <span class="o">[</span>INT dim0, INT dim1, INT memberId, STRING date<span class="o">]</span>
+        Partition Keys: <span class="o">[</span>memberId<span class="o">]</span>
+        Sort Keys:      <span class="o">[</span>memberId<span class="o">]</span>
+
+Post Condition
+        Schema: <span class="o">[</span>INT dim0, INT dim1, INT memberId, STRING date<span class="o">]</span>
+        Partition Keys: <span class="o">[</span>memberId<span class="o">]</span>
+        Sort Keys:      <span class="o">[</span>dim0<span class="o">]</span>
+Analyzing job <span class="o">[</span>CUBE operator on AVRO data<span class="o">]</span>...
+---------------------------------------------
+<span class="o">[</span>MAP<span class="o">]</span> CUBE data BY dim0, dim1 PARTITIONED ON memberId AGGREGATES COUNT_DISTINCT<span class="o">(</span>memberId<span class="o">)</span> AS count:LONG;
+
+Precondition <span class="k">for </span>data
+        Schema: <span class="o">[</span>INT dim0, INT dim1, INT memberId, STRING date<span class="o">]</span>
+        Partition Keys: <span class="o">[</span>memberId<span class="o">]</span>
+        Sort Keys:      <span class="o">[</span>dim0<span class="o">]</span>
+
+Post Condition
+        ERROR
+ERROR: PreconditionException <span class="o">[</span>INVALID_SORT_KEYS<span class="o">]</span> <span class="nv">Found</span><span class="o">=[</span>dim0<span class="o">]</span>. <span class="nv">Expected</span><span class="o">=[</span>memberId<span class="o">]</span>
+At:     <span class="o">[</span>MAP<span class="o">]</span> CUBE data BY dim0, dim1 PARTITIONED ON memberId AGGREGATES COUNT_DISTINCT<span class="o">(</span>memberId<span class="o">)</span> AS count;
+
+Cannot compile cubert script. Exiting.
+</pre></div>
+</div>
+<p>For each operator encountered in the script, the debug mode print the schema, partition keys and sort keys of the input data as well as the partition and sort keys <em>after</em> the operator.</p>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../operators/index.html" class="btn btn-neutral float-right" title="Cubert Operators"/>Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="grouping_sets.html" class="btn btn-neutral" title="Aggregation: Cube and Grouping Sets"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2014, LinkedIn Cubert Team.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

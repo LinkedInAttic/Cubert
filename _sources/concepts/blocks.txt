@@ -1,0 +1,70 @@
+.. (c) 2014 LinkedIn Corp. All rights reserved.
+ 
+	Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+	this file except in compliance with the License. You may obtain a copy of the
+	License at  http://www.apache.org/licenses/LICENSE-2.0
+	
+	Unless required by applicable law or agreed to in writing, software distributed
+	under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+	CONDITIONS OF ANY KIND, either express or implied.
+
+.. _partitioned-blocks:
+
+Partitioned Blocks
+====================
+ 
+Let consider a pageviews tracking dataset, consisting of three columns: *memberId* (int), *pagekey* (string) and *timestamp* (long). And as it is usually the case, the data is spread out in multiple files (part-00000.avro, part-00001.avro, etc) within a folder, and not partitioned or sorted in any particular way.
+
+In contract, the Cubert paradigm of computation encourages the data to be stored in more structured fashion. In particular, we would like to partition the data (on some *partition keys*) into data units, called **Partitioned Blocks** or simply blocks. Further, we would like each block of data to be sorted on some columns (these *sort keys* may be different from partition keys). This process of transforming the 'raw' dataset into partitioned and sorted data units is called **BLOCKGEN**. This process is depicted below.
+
+.. figure::  ../_static/blockgen.png
+   :align:   center
+   :width: 400pt
+
+BLOCKGEN Checklist
+--------------------
+
+As a user of Cubert, we are responsible for the following four actions for BLOCKGEN:
+
+#. Defining Partition Keys: the columns along which the dataset is to be partitioned.
+
+	For example, lets say we chose to partition the pageviews tracking dataset above along *memberId*. In this case, all rows for a given memberId, say memberId=1234, will be present in only one block. 
+
+#. (Optional) Defining Sorting Keys: the columns along with *each block* is sorted.
+
+	Note that sorting happens *within the blocks*. That is, the data is NOT globally sorted. For example, say we can choose the blocks partitioned on memberId to be sorted on timestamp. 
+
+#. Defining Cost Function: to specify the size of the blocks.
+
+	There are three ways we can control the size of the blocks:
+	
+	* By ROW: each block should have the specified number of rows.
+	* By PARTITION KEYS: each block should have specified number of partition keys. This cost function will be same as BY ROW, if the partition keys is the primary key as well (that is, only only row per partition key).
+	* By SIZE: each block should have specified number of bytes.
+
+#. Storing the BLOCKGEN data in CubertStore file format: the dataset organized into blocks MUST be stored in CubertStore file format.
+	
+	CubertStore supports a custom data layout format that embeds indices and other metadata related to the BLOCKGEN process.
+
+	
+Creating Partitioned Blocks
+------------------------------- 
+
+The blocks are created using the BLOCKGEN shuffle command, discussed in detail :ref:`here <blockgen>`. And example is shown below:
+
+.. code-block:: java
+
+	JOB "our first BLOCKGEN"
+		REDUCERS 10;
+		MAP {
+			data = LOAD "/path/to/data" USING AVRO();
+		}
+		// Create blocks that are (a) partitioned on memberId, (b) sorted on timestamp, and
+		// (c) have a size of 1000 rows
+		BLOCKGEN data BY ROW 1000 PARTITIONED ON memberId SORTED ON timestamp;
+
+		// ALWAYS store BLOCKGEN data using CubertStore file format!
+		STORE data INTO "/path/to/output" USING CubertStore();
+	END
+
+Note that there will be 10 data files (part-r-00000.rbx through part-r-00009.rbx), since we assigned as many number of reducers. That is to say, the CubertStore file can store more than one block in a single file. So don't worry about the file count quota when creating 1000's of blocks!

@@ -1,0 +1,308 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Processing Operators &mdash; Cubert 0.1.0 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="Cubert 0.1.0 documentation" href="../index.html"/>
+        <link rel="up" title="Cubert Operators" href="index.html"/>
+        <link rel="next" title="Builtin Functions" href="builtin_functions.html"/>
+        <link rel="prev" title="Input/Output Operators" href="load_store.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="../index.html" class="fa fa-home"> Cubert</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installing Cubert</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../install.html#upgrading-cubert">Upgrading Cubert</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../wordcount.html">Our First Cubert Program</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../wordcount.html#the-cubert-map-reduce-cmr-script">The Cubert Map-Reduce (.cmr) Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../wordcount.html#parsing-and-compiling-the-script">Parsing and Compiling the Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../wordcount.html#running-the-script">Running the Script</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../cmr_language_reference.html">Cubert Map-Reduce Language Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../cmr_language_reference.html#structure-of-a-cubert-program">Structure of a Cubert Program</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cmr_language_reference.html#word-count-in-cubert">Word Count in Cubert</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../concepts/index.html">Understanding Cubert Concepts</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/blocks.html">Partitioned Blocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/coblocks.html">Co-partitioned Blocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/rubixtool.html">Analyzing Rubix File with <em>rubixtool</em></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/grouping_sets.html">Aggregation: Cube and Grouping Sets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/conditions.html">Operator Preconditions</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Cubert Operators</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="load_store.html">Input/Output Operators</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">Processing Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="builtin_functions.html">Builtin Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="join.html">Join Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aggregation.html">Aggregation Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dictionary.html">Dictionary Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="blocks.html">Block Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shuffle.html">Shuffle Operators</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../userdefined/index.html">Extending Cubert</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/functions.html">User Defined Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/aggregations.html">User Defined Aggregation Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/operators.html">Adding new Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/storage.html">Adding new Storage Formats</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../patterns/index.html">Typical Patterns</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../patterns/union.html">UNION Pattern</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../javadoc.html">Javadoc</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../publications.html">Publications and Presentations</a></li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">Cubert</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="index.html">Cubert Operators</a> &raquo;</li>
+      
+    <li>Processing Operators</li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <div class="section" id="processing-operators">
+<h1>Processing Operators<a class="headerlink" href="#processing-operators" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="from-generate">
+<h2>FROM.. GENERATE<a class="headerlink" href="#from-generate" title="Permalink to this headline">¶</a></h2>
+<p>This operator is used for:</p>
+<ul class="simple">
+<li>projecting certain columns</li>
+<li>renaming columns</li>
+<li>running UDFs and functions.</li>
+</ul>
+<p>FROM.. GENERATE is akin to FOREACH.. GENERATE in Pig.</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="c1">// projecting certain columns</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">FROM</span> <span class="n">input</span> <span class="n">GENERATE</span> <span class="n">member_sk</span><span class="o">,</span> <span class="n">country_code</span><span class="o">,</span> <span class="n">locate_sk</span><span class="o">;</span>
+
+<span class="c1">// renaming columns</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">FROM</span> <span class="n">input</span> <span class="n">GENERATE</span> <span class="n">member_sk</span> <span class="n">AS</span> <span class="n">memberId</span><span class="o">,</span> <span class="n">page_key</span> <span class="n">AS</span> <span class="n">pageKey</span><span class="o">;</span>
+
+<span class="c1">// running UDFs and functions</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">FROM</span> <span class="n">input</span> <span class="n">GENERATE</span> <span class="n">page_key</span> <span class="n">AS</span> <span class="n">page_key</span><span class="o">,</span> <span class="n">com</span><span class="o">.</span><span class="na">linkedin</span><span class="o">.</span><span class="na">dwh</span><span class="o">.</span><span class="na">udf</span><span class="o">.</span><span class="na">string</span><span class="o">.</span><span class="na">NVL</span><span class="o">(</span><span class="n">searchType</span><span class="o">,</span> <span class="s">&quot;Other-Agg&quot;</span><span class="o">)</span> <span class="n">AS</span> <span class="n">search_type</span><span class="o">;</span>
+</pre></div>
+</div>
+<p>Following kinds of functions can be used within the GENERATE command:</p>
+<ul class="simple">
+<li>Cubert builtin functions (see <a class="reference internal" href="builtin_functions.html#builtin-functions"><em>Builtin Functions</em></a>)</li>
+<li>Pig builtin functions (need to provide full path, e.g. org.apache.pig.builtin.ABS)</li>
+<li>User defined functions (see <em class="xref std std-ref">user-defined-functions</em>)</li>
+</ul>
+<p>PRECONDITIONS: None.</p>
+</div>
+<div class="section" id="filter">
+<h2>FILTER<a class="headerlink" href="#filter" title="Permalink to this headline">¶</a></h2>
+<p>FILTER operator is used to filter the data input to the operator based on certain set of specified predicates. FILTER is akin to FILTER in Pig. For instance:</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="n">filtered</span> <span class="o">=</span> <span class="n">FILTER</span> <span class="n">input</span> <span class="n">BY</span> <span class="n">NOT</span> <span class="n">resultType</span> <span class="n">IS</span> <span class="n">NULL</span> <span class="n">AND</span> <span class="n">member_sk</span> <span class="o">&gt;</span> <span class="mi">100</span> <span class="n">AND</span> <span class="n">country_code</span> <span class="o">&lt;</span> <span class="mi">10</span><span class="o">;</span>
+</pre></div>
+</div>
+<p>The predicates supported are: &gt;, &lt;, &gt;=, &lt;=, ==, !=, NOT, IS NULL.</p>
+<p>PRECONDITIONS: None.</p>
+</div>
+<div class="section" id="limit">
+<h2>LIMIT<a class="headerlink" href="#limit" title="Permalink to this headline">¶</a></h2>
+<p>This operator is useful to limit the number of tuples sent to the next operator in the script. For instance, if we want to store only 10 tuples in the output, or only consider 10 tuples in the input to run the script on a sample data.</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="n">data</span> <span class="o">=</span> <span class="n">LIMIT</span> <span class="n">input</span> <span class="mi">10</span><span class="o">;</span>
+</pre></div>
+</div>
+<p>PRECONDITIONS: None.</p>
+</div>
+<div class="section" id="top-n">
+<h2>TOP [N]<a class="headerlink" href="#top-n" title="Permalink to this headline">¶</a></h2>
+<p>This operator will output top N# of records from input data, for every grouping set. N is an optional argument &#8211; when unspecified the operator will output the top record.</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="c1">// output top ten members per country, ordered by their join date</span>
+<span class="n">top_10</span> <span class="o">=</span> <span class="n">TOP</span> <span class="mi">10</span> <span class="n">FROM</span> <span class="n">member_data</span> <span class="n">GROUP</span> <span class="n">BY</span> <span class="n">country_code</span> <span class="n">ORDER</span> <span class="n">BY</span> <span class="n">member_join_date</span><span class="o">;</span>
+
+<span class="c1">// output first tuple from input dataset, for each grouping set</span>
+<span class="n">best</span> <span class="o">=</span> <span class="n">TOP</span> <span class="n">FROM</span> <span class="n">input_data</span> <span class="n">GROUP</span> <span class="n">BY</span> <span class="n">key_1</span><span class="o">,</span> <span class="n">key_2</span><span class="o">,</span> <span class="n">key_3</span> <span class="n">ORDER</span> <span class="n">BY</span> <span class="n">key_5</span><span class="o">,</span> <span class="n">key_6</span><span class="o">;</span>
+</pre></div>
+</div>
+<p>PRECONDITIONS: Input relation must have a partition key ordering that matches (or is a prefix of) GROUP BY keys and its sort key ordering must match (or be a superset of) concatenation of GROUP BY and ORDER BY keys.</p>
+</div>
+<div class="section" id="distinct">
+<h2>DISTINCT<a class="headerlink" href="#distinct" title="Permalink to this headline">¶</a></h2>
+<p>DISTINCT operator is used to produce only the distinct tuples in the input as output. Distinct is done based on all the columns in the input schema. Typically this operator is used right after shuffle.</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="n">distinctData</span> <span class="o">=</span> <span class="n">DISTINCT</span> <span class="n">input</span><span class="o">;</span>
+</pre></div>
+</div>
+<p>PRECONDITIONS: The input data must be sorted on all the columns.</p>
+</div>
+<div class="section" id="sort">
+<h2>SORT<a class="headerlink" href="#sort" title="Permalink to this headline">¶</a></h2>
+<p>SORT operator is used to sort the input data on a set of specified columns. The output of this operator will have all the input tuples, but sorted on the specified columns. Note that this operators sort data <em>in-memory</em>, so it has to ensured that number of rows should not exceed the JVM memory.</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="n">sorted</span> <span class="o">=</span> <span class="n">SORT</span> <span class="n">input</span> <span class="n">ON</span> <span class="n">member</span><span class="o">,</span> <span class="n">country_sk</span><span class="o">;</span>
+</pre></div>
+</div>
+<p>PRECONDITIONS: None.</p>
+</div>
+<div class="section" id="duplicate">
+<h2>DUPLICATE<a class="headerlink" href="#duplicate" title="Permalink to this headline">¶</a></h2>
+<p>DUPLICATE operator is useful to duplicate the input tuples a certain number of times (say x). The output of the operator will have each input tuple duplicated x times. The tuples will have a new column called COUNTER whose value varies from 0 to x-1.</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="c1">// duplicate the tuples two times</span>
+<span class="n">duplicated</span> <span class="o">=</span> <span class="n">DUPLICATE</span> <span class="n">input</span> <span class="mi">2</span> <span class="n">TIMES</span><span class="o">;</span>
+
+<span class="c1">// the counter column, if needed, can be renamed to a different name</span>
+<span class="n">duplicated</span> <span class="o">=</span> <span class="n">DUPLICATE</span> <span class="n">input</span> <span class="mi">2</span> <span class="n">TIMES</span> <span class="n">COUNTER</span> <span class="n">AS</span> <span class="n">mycounter</span><span class="o">;</span>
+</pre></div>
+</div>
+<p>PRECONDITIONS: None.</p>
+</div>
+<div class="section" id="flatten">
+<h2>FLATTEN<a class="headerlink" href="#flatten" title="Permalink to this headline">¶</a></h2>
+<p>Coming soon.</p>
+</div>
+<div class="section" id="null">
+<h2>NULL<a class="headerlink" href="#null" title="Permalink to this headline">¶</a></h2>
+<p>NULL or NO_OP operator sends the input data to the subsequent operator. Typically used when the variable referring to a relation needs to be renamed. Here&#8217;s an example usage.</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="n">output</span> <span class="o">=</span> <span class="n">NO_OP</span> <span class="n">input</span><span class="o">;</span>
+</pre></div>
+</div>
+<p>PRECONDITIONS: None.</p>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="builtin_functions.html" class="btn btn-neutral float-right" title="Builtin Functions"/>Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="load_store.html" class="btn btn-neutral" title="Input/Output Operators"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2014, LinkedIn Cubert Team.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

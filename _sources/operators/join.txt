@@ -1,0 +1,53 @@
+.. (c) 2014 LinkedIn Corp. All rights reserved.
+ 
+	Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+	this file except in compliance with the License. You may obtain a copy of the
+	License at  http://www.apache.org/licenses/LICENSE-2.0
+	
+	Unless required by applicable law or agreed to in writing, software distributed
+	under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+	CONDITIONS OF ANY KIND, either express or implied.
+
+Join Operators
+=================
+
+(Merge) JOIN
+-------------
+
+JOIN operator performs a merge join on the two input relations on the specified join keys. The output of this operator returns the joined result, where each tuple will have columns from both the input relations, but their names will be the concatenation of the <inputname> + "___" (3 underscores) + columnname.
+
+Example usages:
+
+.. code-block:: java
+
+	// inner join; default
+	joined_dataset = JOIN relation1 BY joinKey1, relation2 BY joinKey2;
+
+	// left outer join
+	joined_dataset = JOIN LEFT OUTER relation1 BY joinKey1, relation2 BY joinKey2;
+	 
+	// right outer join
+	joined_dataset = JOIN RIGHT OUTER relation1 BY joinKey1, relation2 BY joinKey2; 
+	 
+	// full outer join
+	joined_dataset = JOIN FULL OUTER relation1 BY joinKey1, relation2 BY joinKey2;
+
+
+PRECONDITIONS: Both relations must be *partitioned* and *sorted* on the join keys.
+
+HASH-JOIN
+-------------
+
+HASH-JOIN operator performs a HASH JOIN of the input relations by loading the right relation into a hash table. It takes two relations and their corresponding join keys as inputs. It returns all the tuples in the joined results, where each tuple will have columns from both the input relations, but their names will be the concatenation of the <inputname> + "___" (3 underscores) + columnname.
+
+.. code-block:: java
+
+	// inner join; default
+	joined_dataset = HASH-JOIN relation1 BY joinKey1, relation2 BY joinKey2;
+	
+	// outer joins
+	joined_dataset = HASH-JOIN LEFT OUTER relation1 BY joinKey1, relation2 BY joinKey2;
+	joined_dataset = HASH-JOIN RIGHT OUTER relation1 BY joinKey1, relation2 BY joinKey2;
+	joined_dataset = HASH-JOIN FULL OUTER relation1 BY joinKey1, relation2 BY joinKey2;
+
+PRECONDITIONS: None.

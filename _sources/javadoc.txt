@@ -1,0 +1,4 @@
+Javadoc
+============
+
+`Available here <_static/javadoc/index.html>`_

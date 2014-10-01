@@ -1,0 +1,401 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Aggregation: Cube and Grouping Sets &mdash; Cubert 0.1.0 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="Cubert 0.1.0 documentation" href="../index.html"/>
+        <link rel="up" title="Understanding Cubert Concepts" href="index.html"/>
+        <link rel="next" title="Operator Preconditions" href="conditions.html"/>
+        <link rel="prev" title="Analyzing Rubix File with rubixtool" href="rubixtool.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="../index.html" class="fa fa-home"> Cubert</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installing Cubert</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../install.html#upgrading-cubert">Upgrading Cubert</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../wordcount.html">Our First Cubert Program</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../wordcount.html#the-cubert-map-reduce-cmr-script">The Cubert Map-Reduce (.cmr) Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../wordcount.html#parsing-and-compiling-the-script">Parsing and Compiling the Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../wordcount.html#running-the-script">Running the Script</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../cmr_language_reference.html">Cubert Map-Reduce Language Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../cmr_language_reference.html#structure-of-a-cubert-program">Structure of a Cubert Program</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cmr_language_reference.html#word-count-in-cubert">Word Count in Cubert</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Understanding Cubert Concepts</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="blocks.html">Partitioned Blocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="coblocks.html">Co-partitioned Blocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="rubixtool.html">Analyzing Rubix File with <em>rubixtool</em></a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">Aggregation: Cube and Grouping Sets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="conditions.html">Operator Preconditions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../operators/index.html">Cubert Operators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../operators/load_store.html">Input/Output Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/processing.html">Processing Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/builtin_functions.html">Builtin Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/join.html">Join Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/aggregation.html">Aggregation Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/dictionary.html">Dictionary Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/blocks.html">Block Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../operators/shuffle.html">Shuffle Operators</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../userdefined/index.html">Extending Cubert</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/functions.html">User Defined Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/aggregations.html">User Defined Aggregation Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/operators.html">Adding new Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/storage.html">Adding new Storage Formats</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../patterns/index.html">Typical Patterns</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../patterns/union.html">UNION Pattern</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../javadoc.html">Javadoc</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../publications.html">Publications and Presentations</a></li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">Cubert</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="index.html">Understanding Cubert Concepts</a> &raquo;</li>
+      
+    <li>Aggregation: Cube and Grouping Sets</li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <div class="section" id="aggregation-cube-and-grouping-sets">
+<span id="grouping-sets"></span><h1>Aggregation: Cube and Grouping Sets<a class="headerlink" href="#aggregation-cube-and-grouping-sets" title="Permalink to this headline">¶</a></h1>
+<p>In this section we will look into the <strong>CUBE</strong> operator provided by Cubert. We will first discuss what are cubes, followed by what kind of aggregations we can compute using this operator. Finally, we will look at some simple examples for building cube using Cubert Script.</p>
+<div class="section" id="what-are-cubes-and-grouping-sets">
+<h2>What are Cubes and Grouping Sets?<a class="headerlink" href="#what-are-cubes-and-grouping-sets" title="Permalink to this headline">¶</a></h2>
+<p>An OLAP Cube, or simply cube, is a multi-level aggregation of some base dataset. Lets say we have a dataset: {product, store, date, dollar_sales}. We are interested in aggregate information that can answer ALL of the following questions:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="4%" />
+<col width="50%" />
+<col width="46%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Id</th>
+<th class="head">Query</th>
+<th class="head">SQL statement</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>1</td>
+<td>Sales for each product, in each
+store and for each date</td>
+<td>SELECT SUM(dollar_sales)  ..
+GROUP BY product, store, date</td>
+</tr>
+<tr class="row-odd"><td>2</td>
+<td>Sales for each product, in each
+store, ACROSS ALL dates</td>
+<td>SELECT SUM(dollar_sales)  ..
+GROUP BY product, store</td>
+</tr>
+<tr class="row-even"><td>3</td>
+<td>Sales for each product, for each
+date, ACROSS ALL stores</td>
+<td>SELECT SUM(dollar_sales)  ..
+GROUP BY product, date</td>
+</tr>
+<tr class="row-odd"><td>4</td>
+<td>Sales for each store, for each
+date, ACROSS ALL dates</td>
+<td>SELECT SUM(dollar_sales)  ..
+GROUP BY date, store</td>
+</tr>
+<tr class="row-even"><td>5</td>
+<td>Sales for each product,
+ACROSS ALL dates and store</td>
+<td>SELECT SUM(dollar_sales)  ..
+GROUP BY product</td>
+</tr>
+<tr class="row-odd"><td>6</td>
+<td>Sales for each store,
+ACROSS ALL dates and products</td>
+<td>SELECT SUM(dollar_sales)  ..
+GROUP BY store</td>
+</tr>
+<tr class="row-even"><td>7</td>
+<td>Sales for each date,
+ACROSS ALL stores and products</td>
+<td>SELECT SUM(dollar_sales)  ..
+GROUP BY date</td>
+</tr>
+<tr class="row-odd"><td>8</td>
+<td>Sales ACROSS ALL dates, stores
+and products</td>
+<td>SELECT SUM(dollar_sales)  ..
+GROUP BY ALL</td>
+</tr>
+</tbody>
+</table>
+<p>While it may look like we need 8 GroupBy commands to compute these aggregates, we actually need only one CUBE operator that will compute all these aggregates in one shot! <strong>The strength of the CUBE operator is computing multiple GroupBys in one place</strong> (albeit all these groupby are derived from same set of aggregation columns &#8211; product, store and date in the example above).</p>
+<p>We can, now, very compactly write all the 8 GroupBy from above very simply as:</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="c1">// in SQL syntax</span>
+<span class="n">SELECT</span> <span class="nf">SUM</span><span class="o">(</span><span class="n">dollar_sales</span><span class="o">)</span> <span class="o">..</span> <span class="n">CUBE</span> <span class="n">BY</span> <span class="n">product</span><span class="o">,</span> <span class="n">store</span><span class="o">,</span> <span class="n">date</span>
+
+<span class="c1">// in Cubert Script syntax</span>
+<span class="n">CUBE</span> <span class="n">input</span> <span class="n">BY</span> <span class="n">product</span><span class="o">,</span> <span class="n">store</span><span class="o">,</span> <span class="n">date</span> <span class="n">AGGREGATES</span> <span class="n">SUM</span><span class="o">(</span><span class="n">dollar_sales</span><span class="o">)</span> <span class="n">AS</span> <span class="n">sum</span><span class="o">;</span>
+</pre></div>
+</div>
+<div class="section" id="id1">
+<h3>Grouping Sets<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<p>By default, the CUBE operator computes all possible aggregation levels (with <em>D</em> dimensions, there will be a total of <em>2^D</em> such aggregations). If we are interested in only a subset of these aggregation levels, we can instruct the Cubert CUBE operator to compute the subset only. In the example above, say, we were interested in queries 2, 3 and 5 only (that is, 3 GroupBys). This subset of GroupBys, from the possible set of 2^D GroupBys, is called a <strong>Grouping Set</strong>. In Cubert Script we can specify exactly which groupbys should be computed. For example:</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="n">CUBE</span> <span class="n">input</span> <span class="n">BY</span> <span class="n">product</span><span class="o">,</span> <span class="n">store</span><span class="o">,</span> <span class="n">date</span> <span class="n">AGGREGATES</span> <span class="n">SUM</span><span class="o">(</span><span class="n">dollar_sales</span><span class="o">)</span> <span class="n">AS</span> <span class="nl">sum:</span><span class="n">DOUBLE</span>
+                        <span class="n">GROUPING</span> <span class="nf">SETS</span> <span class="o">(</span><span class="n">product</span><span class="o">,</span> <span class="n">store</span><span class="o">),</span> <span class="o">(</span><span class="n">product</span><span class="o">,</span> <span class="n">date</span><span class="o">),</span> <span class="o">(</span><span class="n">product</span><span class="o">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="additive-and-partitioned-additive-aggregations">
+<h2>Additive and Partitioned-Additive Aggregations<a class="headerlink" href="#additive-and-partitioned-additive-aggregations" title="Permalink to this headline">¶</a></h2>
+<p>In the previous example we compute the SUM() aggregate, which happens to be an example of <strong>Distributive Aggregation Function</strong>. With these functions, we can divide the input data in any arbitrary fashion, apply the function on each subset of the data to compute partial aggregates, and then later combine these partial aggregates to full aggregates. Other examples of distributive functions are COUNT, MIN and MAX. In Cubert terminology we call these are <strong>Additive Aggregates</strong>.</p>
+<p>Another class of aggregation function is <strong>Psuedo-Distributive Functions</strong>, and COUNT(DISTINCT) (abbreviated as CD in this text) is one example. This is not a distributive function, because if we were to divide our data in arbitrary fashion and compute CD for each subset, there is no way we can combine these partial aggregates together. However, if we were to <em>partition the data on the measure</em> (measure: the column that we are aggregating), then count distinct problem becomes additive! As an example, we partition the data on memberId, say into [memberIds from 1 to 1M], [1M to 2M], [2M to 3M] etc. Now, we can compute CD for each partition (to give us CD for each range of memberIds) and then add them together to get the CD for the entire range of memberIds. In Cubert terminology, we call these as <strong>Partitioned-Additive Aggregates</strong> (since the aggregates are additive <em>IF they are partitioned on the member</em>).</p>
+<p>And finally, there are <strong>Holistic Functions</strong>, which are neither distributive nor psuedo-distributive. Median or percentile rank are examples in this class. Cubert does not currently support these aggregation functions.</p>
+<p>Some examples of CUBE operator for the additive and partitioned-additive aggregations are shown below:</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="cm">/* Example of additive aggregations */</span>
+<span class="c1">// Since SUM, COUNT, MIN, MAX are additive aggregates, we use the standard CUBE operator</span>
+<span class="n">CUBE</span> <span class="n">input</span> <span class="n">BY</span> <span class="n">dim1</span><span class="o">,</span> <span class="n">dim2</span><span class="o">,</span> <span class="o">..</span> <span class="n">dimN</span> <span class="n">AGGREGATES</span> <span class="n">SUM</span><span class="o">(</span><span class="n">measure1</span><span class="o">),</span> <span class="n">COUNT</span><span class="o">(</span><span class="n">measure2</span><span class="o">),</span> <span class="n">MIN</span><span class="o">(</span><span class="n">measure3</span><span class="o">),</span> <span class="n">MAX</span><span class="o">(</span><span class="n">measure4</span><span class="o">),</span> <span class="o">...;</span>
+
+
+<span class="cm">/* Example of partitioned-additive aggregation */</span>
+<span class="c1">// Since COUNT(DISTINCT memberId) is partitioned-additive, we have to specify to the CUBE operator that the</span>
+<span class="c1">// data is partitioned on memberId.</span>
+<span class="c1">// We also have to make sure that data is INDEED partitioned on memberId (which is accomplished by BLOCKGEN or</span>
+<span class="c1">// BLOCKGEN BY INDEX command in the previous sections)</span>
+<span class="c1">// [Notice the INNER memberId clause in the statement below]</span>
+<span class="n">CUBE</span> <span class="n">input</span> <span class="n">BY</span> <span class="n">dim1</span><span class="o">,</span> <span class="n">dim2</span><span class="o">,</span> <span class="o">..</span> <span class="n">dimN</span> <span class="n">INNER</span> <span class="n">memberId</span> <span class="n">AGGREGATES</span> <span class="n">COUNT_DISTINCT</span><span class="o">(</span><span class="n">memberId</span><span class="o">)</span> <span class="n">as</span> <span class="n">sum</span><span class="o">;</span>
+</pre></div>
+</div>
+<p>The Count Distinct example above was a special case of partitioned additive aggregation function. In general, the aggregation function is a pair of two additive aggregation functions (e.g. [MAX, SUM]), where the inner function (SUM) is applied separately for each measure, and the outer function (MAX) is applied to the results across the measures. We can write these aggregation functions as:</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="n">CUBE</span> <span class="n">input</span> <span class="n">BY</span> <span class="n">dim1</span><span class="o">,</span> <span class="n">dim2</span> <span class="o">..</span> <span class="n">dimN</span> <span class="n">INNER</span> <span class="n">memberId</span> <span class="n">AGGREGATES</span> <span class="o">[</span><span class="n">MAX</span><span class="o">,</span> <span class="n">SUM</span><span class="o">](</span><span class="n">sales</span><span class="o">);</span>
+</pre></div>
+</div>
+<p>The above statement will compute an OLAP cube of the MAX values of SUM of sales for each memberId.</p>
+</div>
+<div class="section" id="understanding-the-output">
+<h2>Understanding the Output<a class="headerlink" href="#understanding-the-output" title="Permalink to this headline">¶</a></h2>
+<p>Lets go back to the full cube example. The first query (GROUP By product, store, date) will have the output in expected format:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="22%" />
+<col width="36%" />
+<col width="27%" />
+<col width="16%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Product</th>
+<th class="head">Store</th>
+<th class="head">Date</th>
+<th class="head">Sum</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>iPhone</td>
+<td>Mountain View</td>
+<td>2014-01-01</td>
+<td>$1000</td>
+</tr>
+</tbody>
+</table>
+<p>How about query 2 (GROUP BY product, store)? Here we are computing aggregates ACROSS all dates. The output the Cubert CUBE operator will assign <em>null</em> to the date column to indicate the aggregation is across ALL values for this column.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="22%" />
+<col width="36%" />
+<col width="27%" />
+<col width="16%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">&nbsp;</th>
+<th class="head">&nbsp;</th>
+<th class="head">&nbsp;</th>
+<th class="head">&nbsp;</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>iPhone</td>
+<td>Mountain View</td>
+<td>null</td>
+<td>$5000</td>
+</tr>
+</tbody>
+</table>
+<p>Consider another query: GROUP BY store. Here the aggregations are across all products and dates; the output would look like:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="22%" />
+<col width="36%" />
+<col width="27%" />
+<col width="16%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">&nbsp;</th>
+<th class="head">&nbsp;</th>
+<th class="head">&nbsp;</th>
+<th class="head">&nbsp;</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>null</td>
+<td>Mountain View</td>
+<td>null</td>
+<td>$12000</td>
+</tr>
+</tbody>
+</table>
+<p>And, of course, the last query (GROUP BY ALL) will have all columns as null.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>nulls in Input</p>
+<p class="last">Since <em>null</em> is reserved to indicate that the aggregate is across all values of the column, we <strong>cannot have nulls in input data</strong>. We should use the CASE function to replace the null values in input dataset with some placeholder value (e.g. &#8220;N/A&#8221;, &#8220;Unknown&#8221;, -9, etc).</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="conditions.html" class="btn btn-neutral float-right" title="Operator Preconditions"/>Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="rubixtool.html" class="btn btn-neutral" title="Analyzing Rubix File with rubixtool"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2014, LinkedIn Cubert Team.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

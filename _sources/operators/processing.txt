@@ -1,0 +1,142 @@
+.. (c) 2014 LinkedIn Corp. All rights reserved.
+ 
+	Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+	this file except in compliance with the License. You may obtain a copy of the
+	License at  http://www.apache.org/licenses/LICENSE-2.0
+	
+	Unless required by applicable law or agreed to in writing, software distributed
+	under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+	CONDITIONS OF ANY KIND, either express or implied.
+
+Processing Operators
+=======================
+
+
+
+FROM.. GENERATE
+------------------
+
+This operator is used for:
+
+* projecting certain columns
+* renaming columns
+* running UDFs and functions.
+
+FROM.. GENERATE is akin to FOREACH.. GENERATE in Pig.
+
+.. code-block:: java
+
+	// projecting certain columns
+	data = FROM input GENERATE member_sk, country_code, locate_sk;
+
+	// renaming columns
+	data = FROM input GENERATE member_sk AS memberId, page_key AS pageKey;
+
+	// running UDFs and functions
+	data = FROM input GENERATE page_key AS page_key, com.linkedin.dwh.udf.string.NVL(searchType, "Other-Agg") AS search_type;
+
+
+Following kinds of functions can be used within the GENERATE command:
+
+* Cubert builtin functions (see :ref:`builtin-functions`)
+* Pig builtin functions (need to provide full path, e.g. org.apache.pig.builtin.ABS)
+* User defined functions (see :ref:`user-defined-functions`)
+
+PRECONDITIONS: None.
+
+FILTER
+-------------
+
+FILTER operator is used to filter the data input to the operator based on certain set of specified predicates. FILTER is akin to FILTER in Pig. For instance:
+
+.. code-block:: java
+
+	filtered = FILTER input BY NOT resultType IS NULL AND member_sk > 100 AND country_code < 10;
+
+The predicates supported are: >, <, >=, <=, ==, !=, NOT, IS NULL.
+
+PRECONDITIONS: None.
+
+
+LIMIT
+-------------
+
+This operator is useful to limit the number of tuples sent to the next operator in the script. For instance, if we want to store only 10 tuples in the output, or only consider 10 tuples in the input to run the script on a sample data.
+	
+.. code-block:: java	
+	
+	data = LIMIT input 10;
+
+PRECONDITIONS: None.
+
+
+TOP [N]
+-------------
+
+This operator will output top N# of records from input data, for every grouping set. N is an optional argument -- when unspecified the operator will output the top record.
+
+.. code-block:: java
+
+        // output top ten members per country, ordered by their join date
+	top_10 = TOP 10 FROM member_data GROUP BY country_code ORDER BY member_join_date;
+
+        // output first tuple from input dataset, for each grouping set
+        best = TOP FROM input_data GROUP BY key_1, key_2, key_3 ORDER BY key_5, key_6;
+
+PRECONDITIONS: Input relation must have a partition key ordering that matches (or is a prefix of) GROUP BY keys and its sort key ordering must match (or be a superset of) concatenation of GROUP BY and ORDER BY keys.
+
+
+DISTINCT
+-------------
+
+DISTINCT operator is used to produce only the distinct tuples in the input as output. Distinct is done based on all the columns in the input schema. Typically this operator is used right after shuffle.
+
+.. code-block:: java
+
+	distinctData = DISTINCT input;
+
+PRECONDITIONS: The input data must be sorted on all the columns.
+
+
+SORT
+-------------
+SORT operator is used to sort the input data on a set of specified columns. The output of this operator will have all the input tuples, but sorted on the specified columns. Note that this operators sort data *in-memory*, so it has to ensured that number of rows should not exceed the JVM memory.
+
+.. code-block:: java
+	
+	sorted = SORT input ON member, country_sk;
+
+PRECONDITIONS: None.
+
+DUPLICATE
+-------------
+DUPLICATE operator is useful to duplicate the input tuples a certain number of times (say x). The output of the operator will have each input tuple duplicated x times. The tuples will have a new column called COUNTER whose value varies from 0 to x-1.
+
+.. code-block:: java
+
+	// duplicate the tuples two times
+	duplicated = DUPLICATE input 2 TIMES;
+
+	// the counter column, if needed, can be renamed to a different name
+	duplicated = DUPLICATE input 2 TIMES COUNTER AS mycounter;	
+
+
+PRECONDITIONS: None.
+
+
+FLATTEN
+-------------
+
+Coming soon.
+
+
+NULL
+-------------
+
+NULL or NO_OP operator sends the input data to the subsequent operator. Typically used when the variable referring to a relation needs to be renamed. Here's an example usage.
+
+.. code-block:: java
+	
+	output = NO_OP input;
+
+PRECONDITIONS: None.

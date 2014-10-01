@@ -1,0 +1,132 @@
+.. (c) 2014 LinkedIn Corp. All rights reserved.
+ 
+	Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+	this file except in compliance with the License. You may obtain a copy of the
+	License at  http://www.apache.org/licenses/LICENSE-2.0
+	
+	Unless required by applicable law or agreed to in writing, software distributed
+	under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+	CONDITIONS OF ANY KIND, either express or implied.
+
+.. _grouping-sets:
+
+Aggregation: Cube and Grouping Sets
+=====================================
+In this section we will look into the **CUBE** operator provided by Cubert. We will first discuss what are cubes, followed by what kind of aggregations we can compute using this operator. Finally, we will look at some simple examples for building cube using Cubert Script.
+
+
+What are Cubes and Grouping Sets?
+--------------------------------------
+An OLAP Cube, or simply cube, is a multi-level aggregation of some base dataset. Lets say we have a dataset: {product, store, date, dollar_sales}. We are interested in aggregate information that can answer ALL of the following questions:
+
+
+=== ==================================== =================================
+Id         Query                                  SQL statement
+=== ==================================== =================================   
+ 1    Sales for each product, in each      SELECT SUM(dollar_sales)  ..
+      store and for each date              GROUP BY product, store, date
+ 2    Sales for each product, in each      SELECT SUM(dollar_sales)  ..
+      store, ACROSS ALL dates              GROUP BY product, store
+3    Sales for each product, for each      SELECT SUM(dollar_sales)  ..
+     date, ACROSS ALL stores               GROUP BY product, date 
+4    Sales for each store, for each        SELECT SUM(dollar_sales)  ..
+     date, ACROSS ALL dates                GROUP BY date, store
+5    Sales for each product,               SELECT SUM(dollar_sales)  ..
+     ACROSS ALL dates and store            GROUP BY product
+6    Sales for each store,                 SELECT SUM(dollar_sales)  ..
+     ACROSS ALL dates and products         GROUP BY store
+7    Sales for each date,                  SELECT SUM(dollar_sales)  ..
+     ACROSS ALL stores and products        GROUP BY date
+8    Sales ACROSS ALL dates, stores        SELECT SUM(dollar_sales)  ..
+     and products                          GROUP BY ALL
+=== ==================================== =================================
+
+While it may look like we need 8 GroupBy commands to compute these aggregates, we actually need only one CUBE operator that will compute all these aggregates in one shot! **The strength of the CUBE operator is computing multiple GroupBys in one place** (albeit all these groupby are derived from same set of aggregation columns -- product, store and date in the example above).
+
+We can, now, very compactly write all the 8 GroupBy from above very simply as:
+
+.. code-block:: java
+
+	// in SQL syntax
+	SELECT SUM(dollar_sales) .. CUBE BY product, store, date
+
+	// in Cubert Script syntax
+	CUBE input BY product, store, date AGGREGATES SUM(dollar_sales) AS sum;
+	
+
+Grouping Sets
+~~~~~~~~~~~~~~~~
+By default, the CUBE operator computes all possible aggregation levels (with *D* dimensions, there will be a total of *2^D* such aggregations). If we are interested in only a subset of these aggregation levels, we can instruct the Cubert CUBE operator to compute the subset only. In the example above, say, we were interested in queries 2, 3 and 5 only (that is, 3 GroupBys). This subset of GroupBys, from the possible set of 2^D GroupBys, is called a **Grouping Set**. In Cubert Script we can specify exactly which groupbys should be computed. For example:
+
+.. code-block:: java
+
+	CUBE input BY product, store, date AGGREGATES SUM(dollar_sales) AS sum:DOUBLE
+				GROUPING SETS (product, store), (product, date), (product);
+
+
+
+Additive and Partitioned-Additive Aggregations
+------------------------------------------------
+In the previous example we compute the SUM() aggregate, which happens to be an example of **Distributive Aggregation Function**. With these functions, we can divide the input data in any arbitrary fashion, apply the function on each subset of the data to compute partial aggregates, and then later combine these partial aggregates to full aggregates. Other examples of distributive functions are COUNT, MIN and MAX. In Cubert terminology we call these are **Additive Aggregates**.
+
+Another class of aggregation function is **Psuedo-Distributive Functions**, and COUNT(DISTINCT) (abbreviated as CD in this text) is one example. This is not a distributive function, because if we were to divide our data in arbitrary fashion and compute CD for each subset, there is no way we can combine these partial aggregates together. However, if we were to *partition the data on the measure* (measure: the column that we are aggregating), then count distinct problem becomes additive! As an example, we partition the data on memberId, say into [memberIds from 1 to 1M], [1M to 2M], [2M to 3M] etc. Now, we can compute CD for each partition (to give us CD for each range of memberIds) and then add them together to get the CD for the entire range of memberIds. In Cubert terminology, we call these as **Partitioned-Additive Aggregates** (since the aggregates are additive *IF they are partitioned on the member*).
+
+And finally, there are **Holistic Functions**, which are neither distributive nor psuedo-distributive. Median or percentile rank are examples in this class. Cubert does not currently support these aggregation functions.
+
+Some examples of CUBE operator for the additive and partitioned-additive aggregations are shown below:
+
+.. code-block:: java
+
+ 	/* Example of additive aggregations */
+	// Since SUM, COUNT, MIN, MAX are additive aggregates, we use the standard CUBE operator
+	CUBE input BY dim1, dim2, .. dimN AGGREGATES SUM(measure1), COUNT(measure2), MIN(measure3), MAX(measure4), ...;
+
+
+	/* Example of partitioned-additive aggregation */
+	// Since COUNT(DISTINCT memberId) is partitioned-additive, we have to specify to the CUBE operator that the
+	// data is partitioned on memberId.
+	// We also have to make sure that data is INDEED partitioned on memberId (which is accomplished by BLOCKGEN or
+	// BLOCKGEN BY INDEX command in the previous sections)
+	// [Notice the INNER memberId clause in the statement below]
+	CUBE input BY dim1, dim2, .. dimN INNER memberId AGGREGATES COUNT_DISTINCT(memberId) as sum;
+
+The Count Distinct example above was a special case of partitioned additive aggregation function. In general, the aggregation function is a pair of two additive aggregation functions (e.g. [MAX, SUM]), where the inner function (SUM) is applied separately for each measure, and the outer function (MAX) is applied to the results across the measures. We can write these aggregation functions as:
+
+.. code-block:: java
+
+	CUBE input BY dim1, dim2 .. dimN INNER memberId AGGREGATES [MAX, SUM](sales);
+	
+The above statement will compute an OLAP cube of the MAX values of SUM of sales for each memberId.
+
+
+Understanding the Output
+------------------------------
+Lets go back to the full cube example. The first query (GROUP By product, store, date) will have the output in expected format:
+
++----------+----------------+------------+-------+
+| Product  | Store          | Date       | Sum   |
++==========+================+============+=======+
+| iPhone   |  Mountain View | 2014-01-01 | $1000 |
++----------+----------------+------------+-------+
+
+How about query 2 (GROUP BY product, store)? Here we are computing aggregates ACROSS all dates. The output the Cubert CUBE operator will assign *null* to the date column to indicate the aggregation is across ALL values for this column. 
+
+
++----------+----------------+------------+-------+
++==========+================+============+=======+
+| iPhone   |  Mountain View |  null      | $5000 |
++----------+----------------+------------+-------+
+
+Consider another query: GROUP BY store. Here the aggregations are across all products and dates; the output would look like:
+
++----------+----------------+------------+-------+
++==========+================+============+=======+
+| null     |  Mountain View |  null      |$12000 |
++----------+----------------+------------+-------+
+
+
+And, of course, the last query (GROUP BY ALL) will have all columns as null.
+
+.. note:: nulls in Input
+
+	Since *null* is reserved to indicate that the aggregate is across all values of the column, we **cannot have nulls in input data**. We should use the CASE function to replace the null values in input dataset with some placeholder value (e.g. "N/A", "Unknown", -9, etc).

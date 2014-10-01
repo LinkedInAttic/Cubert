@@ -1,0 +1,93 @@
+.. (c) 2014 LinkedIn Corp. All rights reserved.
+ 
+	Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+	this file except in compliance with the License. You may obtain a copy of the
+	License at  http://www.apache.org/licenses/LICENSE-2.0
+	
+	Unless required by applicable law or agreed to in writing, software distributed
+	under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+	CONDITIONS OF ANY KIND, either express or implied.
+
+.. _copartitioned-blocks:
+
+Co-partitioned Blocks
+=======================
+
+Let us now look at the second mechanism for creating blocks. Here, we would like to create blocks that are partitioned along the index of *some other relation*. Say, we have a dataset **P** which we reorganized into blocks using the BLOCKGEN process as described in :ref:`partitioned-blocks`. Internally, the BLOCKGEN process would divide the overall range of partition keys into sub-ranges, where each sub-range correspond to one block. As an example, suppose we created blocks partitioned on memberId, then we would have index something like:
+
+	| memberIds from 0 to 1000 => block 0
+	| memberIds from 1001 to 1500 => block 1
+	| and so on until block N
+
+Now, assume that we have a second dataset **S**. We would like to create *N* blocks (same as the number of blocks in **P**), that are consistently partitioned along the **P** dataset. What we mean here is that the block *i* of **S** will have the same memberIds as were in the block *i* in **P**. In other words, if memberId = 1234 were to be found in block 2 of **P**, then we are ensured to find this memberId in block 2 of **S**. This pattern of consistent partitioning is needed for Map-side joins to these two datasets.
+
+The process of creating consistent partitioned blocks (on some other primary relation) is called **BLOCKGEN BY INDEX**.
+
+BLOCKGEN BY INDEX Checklist
+------------------------------
+
+As Cubert users, we are responsible for following three actions:
+
+#. Defining the primary relation: to specify the index along which we would like to partition our dataset.
+	
+	.. note::
+		
+		BLOCKGEN BY INDEX is a transitive operation. As an example, say we have three datasets: A, B, C. We created blocks out of A using the BLOCKGEN process, and we created co-partitioned blocks of B using A as the primary relation. Now considering C, we can create co-partitioned blocks using either A or B as the primary relation (both are equivalent).
+		
+#. (Optional) Defining Sorting Keys: the columns along with *each block* is sorted.
+
+	As before, the sorting happens *within the blocks*. That is, the data is NOT globally sorted.
+	
+#. Storing the BLOCKGEN BY INDEX data in CubertStore file format: the dataset organized into blocks MUST be stored in CubertStore file format.
+
+	CubertStore supports a custom data layout format that embeds indices and other metadata related to the BLOCKGEN BY INDEX process.	
+	
+Creating Co-Partitioned Blocks
+--------------------------------
+
+The blocks are created using the BLOCKGEN shuffle command, by using the "BY INDEX" form the the command. As can example,
+
+.. code-block:: java
+
+	// the primary dataset
+	JOB "our first BLOCKGEN"
+		REDUCERS 10;
+		MAP {
+			data = LOAD "/path/to/data" USING AVRO();
+		}
+		BLOCKGEN data BY ROW 1000 PARTITIONED ON memberId SORTED ON timestamp;
+		STORE data INTO "/path/to/output" USING CubertStore();
+	END
+	
+	JOB "our first blockgen by index"
+		REDUCERS 20;
+		MAP {
+			data = LOAD "/path/to/other/data" USING AVRO();
+		}
+		BLOCKGEN data BY INDEX "/path/to/output" PARTITIONED ON memberId SORTED ON some_column;
+		STORE data INTO "/path/to/other/output" USING CubertStore();
+	END
+	
+	
+Notice the **BY INDEX "/path/to/output"** script fragment. We have specified here that we would like to create co-partitioned blocks using "/path/to/output" (created in the first job) as the primary dataset.
+
+Idiom of Resorting Blocks
+---------------------------
+The BLOCKGEN BY INDEX process has another use case -- to resort already created blocks!
+
+In the example above, we had the first dataset sorted on *timestamp*. Lets say we want to resort each block on some other columns (say, pagekey). We can use the same BLOCKGEN BY INDEX command to resort data, while making sure that rows within each block remains intact.
+
+.. code-block:: java
+
+	JOB "resorting blocks"
+		REDUCERS 10;
+		MAP {
+			data = LOAD "/path/to/output" USING CubertStore();
+		}
+		BLOCKGEN data BY INDEX "/path/to/output" PARTITIONED ON memberId SORTED ON pagekey;
+		STORE data INTO "/path/to/resorted-output" USING CubertStore();
+	END
+
+We just have to make sure that, (a) we use the primary dataset we use was created via BLOCKGEN process (see note above), and (b) the partition keys must be identical.
+
+Of course, we can also sort the second dataset as well, the one that was created using the BLOCKGEN BY INDEX command.

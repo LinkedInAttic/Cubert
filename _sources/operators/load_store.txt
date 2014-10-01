@@ -1,0 +1,124 @@
+.. (c) 2014 LinkedIn Corp. All rights reserved.
+ 
+	Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+	this file except in compliance with the License. You may obtain a copy of the
+	License at  http://www.apache.org/licenses/LICENSE-2.0
+	
+	Unless required by applicable law or agreed to in writing, software distributed
+	under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+	CONDITIONS OF ANY KIND, either express or implied.
+
+.. _load_store:
+
+Input/Output Operators
+=======================
+
+LOAD
+-----
+LOAD operator is used to load different types of data. The specification of the command is:
+
+.. code-block:: java
+
+	variable = LOAD <path-spec> USING <format-type> ("key1": "value1", "key2": "value2", ...); 
+	# the key-value arguments are optional. The brackets can be omitted if no arguments are supplied.
+
+The path specification is either:
+
+* a single file (e.g. "/path/to/file.avro")
+* a folder (e.g "/path/to/dir")
+* a folder with a data range (e.g. ("/path/to/dir/daily", 20140101, 20140131), or ("/path/to/dir/hourly", 2014010100, 2014010123))
+* a path with *#LATEST* (e.g. "path/to/#LATEST/dir")
+* a path with one or more *\** (e.g. "/path/to/dir/\*")
+* multiple comma-separate paths of any of the above type (e.g. "path1", ("path2/daily", 20140101, 20140102), "path3/#LATEST" )
+
+Cubert supports three file formats: Apache AVRO, TEXT, and CubertStore. These formats can be optionally configured using the key-value arguments. The supports properties are:
+
+
+* "unsplittable": "true" or "false" (default: "false"). If true, do not split a file (create one mapper per file). Supported by AVRO format.
+* "separator": <string> (default: ","). Field separator string in a text record. Supported by TEXT format.
+* "schema": <string> (e.g. "STRING col1, INT col2"). Schema of the input file. Required by TEXT format.
+
+Here are code samples to illustrate the various usages of this operator:
+
+.. code-block:: java
+
+	// loading an AVRO file:
+	data = LOAD "$input/dim_member.avro" USING AVRO;
+
+	// loading a directory:
+	data = LOAD "$inputdir" USING AVRO;
+
+	// loading daily data in a date range:
+	data = LOAD ("$inputdir", 20140201, 20140228) USING AVRO;
+
+	// loading TEXT data with a specified separator. tab is the default separator.
+	data = LOAD "$inputdir" USING TEXT("separator":"\u001A", "schema": "LONG member_sk, LONG count");
+
+	// loading CubertStore data:
+	data = LOAD "$inputdir" USING CubertStore;
+
+
+The AVRO and CubertStore formats will automatically infer the schema of the input data. However, for the TEXT input format, we need to specify the schema of the data (using the "schema" parameter).
+
+
+STORE
+-------
+
+STORE operator is used to store data into the specified folder in the specified format. The usage of STORE closely mirrors the usage of LOAD. 
+
+The optional argument for the STORE operators are:
+
+* "overwrite": "true" or "false" (default: "false"). If true, silently delete existing folder. Supported by all formats.
+* "compact": "true" or "false" (default: "false"). If true, write data in compact variable byte encoding. Supported by CubertStore format.
+* "separator": <string> (default: ","). Field separator string in a text record. Supported by TEXT format.
+
+Here are a few examples to illustrate.
+
+.. code-block:: java
+
+	// store data in a directory in AVRO format::
+	STORE data INTO "$outputdir" USING AVRO;
+
+	// storing in CubertStore format::
+	STORE data INTO "$outputdir" USING CubertStore("overwrite": "true");
+
+	// storing in TEXT format::
+	STORE data INTO "$outputdir" USING TEXT("separator":"\u001A");
+
+No schema specification is needed during STORE.
+
+.. note:: Global configuration for overwriting output data
+
+	We can use one of the following commands in the header section of the script to configure overwrite behavior for ALL the jobs in the script.
+	
+	SET overwrite "false";
+	
+	SET overwrite "true";
+	
+TEE
+-------
+
+TEE operator is useful for storing the results of a computation during intermediate stages to a specified output location. Unlike STORE, this operator can be used anywhere in the script. In addition to input relation, this operator can take a predicate and store only the tuples that match the predicate. Just like unix tee pipes, this operator outputs the data to HDFS and also sends the (unmodified and complete) input data the next operator.
+
+**Note that the TEE operator can only store data in AVRO or TEXT format**.
+
+Examples of using this operator are as follows.
+
+.. code-block:: java
+
+	// Store all the input data in a folder::
+	output = TEE data INTO "$teeOutputPath" USING AVRO;
+
+	// Store only the tuples which have member_sk > 100 into the output folder::
+	output = TEE data INTO "$teeOutputPath" USING AVRO IF member_sk > 100;
+
+
+LOAD-CACHED
+---------------
+
+This operator is used to load a single file from the distributed cache. The usage of this operator is as follows:
+
+.. code-block:: java
+	
+	// The path must refer to a single file, not a directory or multiple files through "*"
+	pagekey = LOAD-CACHED "$input/pagekey.avro" USING AVRO;

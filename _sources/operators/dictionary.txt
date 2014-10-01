@@ -1,0 +1,48 @@
+.. (c) 2014 LinkedIn Corp. All rights reserved.
+ 
+	Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+	this file except in compliance with the License. You may obtain a copy of the
+	License at  http://www.apache.org/licenses/LICENSE-2.0
+	
+	Unless required by applicable law or agreed to in writing, software distributed
+	under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+	CONDITIONS OF ANY KIND, either express or implied.
+
+Dictionary Operators
+=======================
+
+REFRESH-DICTIONARY
+-----------------------
+This operator builds a dictionary on the specified set of columns in the input dataset, and stores the dictionary in the specified output location. This dictionary can be used in other jobs to encode or decode the columns in the data set. Typically this dictionary is used to encode string columns to int in order to reduce data size.
+
+.. code-block:: java
+
+	JOB "create dict for 2 columns in dim_member"
+		REFRESH-DICTIONARY FROM "/projects/dwh/dwh_dim/dim_member/#LATEST" 
+						   INTO "output/dimMemberDict" ON country_sk, default_locale_sk;
+
+This is a special kind of operator -- it is only operator that can be present in the job, and the syntax of the JOB is also different from the traditional Map-Reduce cubert jobs (as seen above).
+
+The ENCODE and DECODE shown below are "regular" cubert operators.
+
+PRECONDITIONS: None.
+
+ENCODE
+------------
+ENCODE operator encodes the input data using the specified dictionary. This operator encodes all the columns on which the dictionary is built.
+
+.. code-block:: java
+
+	encoded = ENCODE inputdata USING "output/dimMemberDict";
+
+PRECONDITIONS: None.
+
+DECODE
+----------
+DECODE operator decodes the input data using the specified dictionary. This operator decodes all the columns on which the dictionary is built.
+
+.. code-block:: java
+
+	decoded = DECODE encoded USING "output/dimMemberDict";
+
+PRECONDITIONS: None.

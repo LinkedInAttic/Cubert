@@ -1,0 +1,55 @@
+.. (c) 2014 LinkedIn Corp. All rights reserved.
+ 
+	Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+	this file except in compliance with the License. You may obtain a copy of the
+	License at  http://www.apache.org/licenses/LICENSE-2.0
+	
+	Unless required by applicable law or agreed to in writing, software distributed
+	under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+	CONDITIONS OF ANY KIND, either express or implied.
+
+Block Operators
+=====================
+
+
+LOAD BLOCK
+---------------------
+
+This operator loads a  block of data from a different dataset that has the matching partition key as that of the input block. This operator usually precedes a JOIN operator.
+
+.. code-block:: java
+	
+	block2 = LOAD BLOCK FROM "dataset2location" MATCHING block1;
+
+
+PRECONDITIONS: The two input datasets must have identical index.
+
+
+COMBINE
+---------------------
+COMBINE operator does a sorted merge (or union) of two input blocks by comparing the input sort columns.
+	
+.. code-block:: java
+
+	combined = COMBINE block1, block2 SORTED ON memberId, country_sk;
+
+PRECONDITIONS: All blocks must be *sorted* on the sort keys.
+
+
+PIVOT
+-------
+
+PIVOT operator creates multiple output (sub-)blocks for an input block based on the columns specified. Each output sub-block would have all the tuples for a distinct value of the pivot keys. The number of output blocks, therefore, is equal to the number of distinct pivot keys found in the input.
+
+.. code-block:: java
+
+	pivotedblock = PIVOT inputblock ON memberId;
+
+PIVOT operator can be used in IN MEMORY mode where in it would store all the tuples in a pivoted sub-block in memory.
+
+.. code-block:: java
+
+	pivotedblock = PIVOT IN MEMORY inputblock ON memberId;
+
+
+PRECONDITIONS: The pivot keys specified must be the prefix of the sort keys of the input block.

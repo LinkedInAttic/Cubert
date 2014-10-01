@@ -1,0 +1,303 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Input/Output Operators &mdash; Cubert 0.1.0 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="Cubert 0.1.0 documentation" href="../index.html"/>
+        <link rel="up" title="Cubert Operators" href="index.html"/>
+        <link rel="next" title="Processing Operators" href="processing.html"/>
+        <link rel="prev" title="Cubert Operators" href="index.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="../index.html" class="fa fa-home"> Cubert</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installing Cubert</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../install.html#upgrading-cubert">Upgrading Cubert</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../wordcount.html">Our First Cubert Program</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../wordcount.html#the-cubert-map-reduce-cmr-script">The Cubert Map-Reduce (.cmr) Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../wordcount.html#parsing-and-compiling-the-script">Parsing and Compiling the Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../wordcount.html#running-the-script">Running the Script</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../cmr_language_reference.html">Cubert Map-Reduce Language Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../cmr_language_reference.html#structure-of-a-cubert-program">Structure of a Cubert Program</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cmr_language_reference.html#word-count-in-cubert">Word Count in Cubert</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../concepts/index.html">Understanding Cubert Concepts</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/blocks.html">Partitioned Blocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/coblocks.html">Co-partitioned Blocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/rubixtool.html">Analyzing Rubix File with <em>rubixtool</em></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/grouping_sets.html">Aggregation: Cube and Grouping Sets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/conditions.html">Operator Preconditions</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Cubert Operators</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="">Input/Output Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="processing.html">Processing Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="builtin_functions.html">Builtin Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="join.html">Join Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aggregation.html">Aggregation Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dictionary.html">Dictionary Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="blocks.html">Block Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shuffle.html">Shuffle Operators</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../userdefined/index.html">Extending Cubert</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/functions.html">User Defined Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/aggregations.html">User Defined Aggregation Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/operators.html">Adding new Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/storage.html">Adding new Storage Formats</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../patterns/index.html">Typical Patterns</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../patterns/union.html">UNION Pattern</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../javadoc.html">Javadoc</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../publications.html">Publications and Presentations</a></li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">Cubert</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="index.html">Cubert Operators</a> &raquo;</li>
+      
+    <li>Input/Output Operators</li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <div class="section" id="input-output-operators">
+<span id="load-store"></span><h1>Input/Output Operators<a class="headerlink" href="#input-output-operators" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="load">
+<h2>LOAD<a class="headerlink" href="#load" title="Permalink to this headline">¶</a></h2>
+<p>LOAD operator is used to load different types of data. The specification of the command is:</p>
+<div class="highlight-java"><div class="highlight"><pre>variable = LOAD &lt;path-spec&gt; USING &lt;format-type&gt; (&quot;key1&quot;: &quot;value1&quot;, &quot;key2&quot;: &quot;value2&quot;, ...);
+# the key-value arguments are optional. The brackets can be omitted if no arguments are supplied.
+</pre></div>
+</div>
+<p>The path specification is either:</p>
+<ul class="simple">
+<li>a single file (e.g. &#8220;/path/to/file.avro&#8221;)</li>
+<li>a folder (e.g &#8220;/path/to/dir&#8221;)</li>
+<li>a folder with a data range (e.g. (&#8220;/path/to/dir/daily&#8221;, 20140101, 20140131), or (&#8220;/path/to/dir/hourly&#8221;, 2014010100, 2014010123))</li>
+<li>a path with <em>#LATEST</em> (e.g. &#8220;path/to/#LATEST/dir&#8221;)</li>
+<li>a path with one or more <em>*</em> (e.g. &#8220;/path/to/dir/*&#8221;)</li>
+<li>multiple comma-separate paths of any of the above type (e.g. &#8220;path1&#8221;, (&#8220;path2/daily&#8221;, 20140101, 20140102), &#8220;path3/#LATEST&#8221; )</li>
+</ul>
+<p>Cubert supports three file formats: Apache AVRO, TEXT, and CubertStore. These formats can be optionally configured using the key-value arguments. The supports properties are:</p>
+<ul class="simple">
+<li>&#8220;unsplittable&#8221;: &#8220;true&#8221; or &#8220;false&#8221; (default: &#8220;false&#8221;). If true, do not split a file (create one mapper per file). Supported by AVRO format.</li>
+<li>&#8220;separator&#8221;: &lt;string&gt; (default: &#8221;,&#8221;). Field separator string in a text record. Supported by TEXT format.</li>
+<li>&#8220;schema&#8221;: &lt;string&gt; (e.g. &#8220;STRING col1, INT col2&#8221;). Schema of the input file. Required by TEXT format.</li>
+</ul>
+<p>Here are code samples to illustrate the various usages of this operator:</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="c1">// loading an AVRO file:</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;$input/dim_member.avro&quot;</span> <span class="n">USING</span> <span class="n">AVRO</span><span class="o">;</span>
+
+<span class="c1">// loading a directory:</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;$inputdir&quot;</span> <span class="n">USING</span> <span class="n">AVRO</span><span class="o">;</span>
+
+<span class="c1">// loading daily data in a date range:</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="o">(</span><span class="s">&quot;$inputdir&quot;</span><span class="o">,</span> <span class="mi">20140201</span><span class="o">,</span> <span class="mi">20140228</span><span class="o">)</span> <span class="n">USING</span> <span class="n">AVRO</span><span class="o">;</span>
+
+<span class="c1">// loading TEXT data with a specified separator. tab is the default separator.</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;$inputdir&quot;</span> <span class="n">USING</span> <span class="n">TEXT</span><span class="o">(</span><span class="s">&quot;separator&quot;</span><span class="o">:</span><span class="s">&quot;\u001A&quot;</span><span class="o">,</span> <span class="s">&quot;schema&quot;</span><span class="o">:</span> <span class="s">&quot;LONG member_sk, LONG count&quot;</span><span class="o">);</span>
+
+<span class="c1">// loading CubertStore data:</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;$inputdir&quot;</span> <span class="n">USING</span> <span class="n">CubertStore</span><span class="o">;</span>
+</pre></div>
+</div>
+<p>The AVRO and CubertStore formats will automatically infer the schema of the input data. However, for the TEXT input format, we need to specify the schema of the data (using the &#8220;schema&#8221; parameter).</p>
+</div>
+<div class="section" id="store">
+<h2>STORE<a class="headerlink" href="#store" title="Permalink to this headline">¶</a></h2>
+<p>STORE operator is used to store data into the specified folder in the specified format. The usage of STORE closely mirrors the usage of LOAD.</p>
+<p>The optional argument for the STORE operators are:</p>
+<ul class="simple">
+<li>&#8220;overwrite&#8221;: &#8220;true&#8221; or &#8220;false&#8221; (default: &#8220;false&#8221;). If true, silently delete existing folder. Supported by all formats.</li>
+<li>&#8220;compact&#8221;: &#8220;true&#8221; or &#8220;false&#8221; (default: &#8220;false&#8221;). If true, write data in compact variable byte encoding. Supported by CubertStore format.</li>
+<li>&#8220;separator&#8221;: &lt;string&gt; (default: &#8221;,&#8221;). Field separator string in a text record. Supported by TEXT format.</li>
+</ul>
+<p>Here are a few examples to illustrate.</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="c1">// store data in a directory in AVRO format::</span>
+<span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;$outputdir&quot;</span> <span class="n">USING</span> <span class="n">AVRO</span><span class="o">;</span>
+
+<span class="c1">// storing in CubertStore format::</span>
+<span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;$outputdir&quot;</span> <span class="n">USING</span> <span class="n">CubertStore</span><span class="o">(</span><span class="s">&quot;overwrite&quot;</span><span class="o">:</span> <span class="s">&quot;true&quot;</span><span class="o">);</span>
+
+<span class="c1">// storing in TEXT format::</span>
+<span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;$outputdir&quot;</span> <span class="n">USING</span> <span class="n">TEXT</span><span class="o">(</span><span class="s">&quot;separator&quot;</span><span class="o">:</span><span class="s">&quot;\u001A&quot;</span><span class="o">);</span>
+</pre></div>
+</div>
+<p>No schema specification is needed during STORE.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p>Global configuration for overwriting output data</p>
+<p>We can use one of the following commands in the header section of the script to configure overwrite behavior for ALL the jobs in the script.</p>
+<p>SET overwrite &#8220;false&#8221;;</p>
+<p class="last">SET overwrite &#8220;true&#8221;;</p>
+</div>
+</div>
+<div class="section" id="tee">
+<h2>TEE<a class="headerlink" href="#tee" title="Permalink to this headline">¶</a></h2>
+<p>TEE operator is useful for storing the results of a computation during intermediate stages to a specified output location. Unlike STORE, this operator can be used anywhere in the script. In addition to input relation, this operator can take a predicate and store only the tuples that match the predicate. Just like unix tee pipes, this operator outputs the data to HDFS and also sends the (unmodified and complete) input data the next operator.</p>
+<p><strong>Note that the TEE operator can only store data in AVRO or TEXT format</strong>.</p>
+<p>Examples of using this operator are as follows.</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="c1">// Store all the input data in a folder::</span>
+<span class="n">output</span> <span class="o">=</span> <span class="n">TEE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;$teeOutputPath&quot;</span> <span class="n">USING</span> <span class="n">AVRO</span><span class="o">;</span>
+
+<span class="c1">// Store only the tuples which have member_sk &gt; 100 into the output folder::</span>
+<span class="n">output</span> <span class="o">=</span> <span class="n">TEE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;$teeOutputPath&quot;</span> <span class="n">USING</span> <span class="n">AVRO</span> <span class="n">IF</span> <span class="n">member_sk</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="o">;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="load-cached">
+<h2>LOAD-CACHED<a class="headerlink" href="#load-cached" title="Permalink to this headline">¶</a></h2>
+<p>This operator is used to load a single file from the distributed cache. The usage of this operator is as follows:</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="c1">// The path must refer to a single file, not a directory or multiple files through &quot;*&quot;</span>
+<span class="n">pagekey</span> <span class="o">=</span> <span class="n">LOAD</span><span class="o">-</span><span class="n">CACHED</span> <span class="s">&quot;$input/pagekey.avro&quot;</span> <span class="n">USING</span> <span class="n">AVRO</span><span class="o">;</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="processing.html" class="btn btn-neutral float-right" title="Processing Operators"/>Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral" title="Cubert Operators"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2014, LinkedIn Cubert Team.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

@@ -1,0 +1,93 @@
+.. (c) 2014 LinkedIn Corp. All rights reserved.
+ 
+	Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+	this file except in compliance with the License. You may obtain a copy of the
+	License at  http://www.apache.org/licenses/LICENSE-2.0
+	
+	Unless required by applicable law or agreed to in writing, software distributed
+	under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+	CONDITIONS OF ANY KIND, either express or implied.
+
+Our First Cubert Program
+==========================
+
+We will look at the standard **Word Count** problem (counting the number of occurrences of each word in a document). The cubert script is available at *$CUBERT_HOME/examples/wordcount.cmr*.
+
+The Cubert Map-Reduce (.cmr) Script
+------------------------------------
+The following shows the complete script for computing word counts. Take a look at the :ref:`script-reference` section to follow the syntax of this script.
+
+.. code-block:: java
+
+	JOB "word count job"
+	    REDUCERS 10;
+	    MAP {
+	        // load the input data set as a TEXT file
+	        input = LOAD "$CUBERT_HOME/examples/words.txt" USING TEXT("schema": "STRING word");
+	        // add a column to each tuple
+	        with_count = FROM input GENERATE word, 1 AS count;
+	    }
+	    // shuffle the data and also invoke combiner to aggregate on map-side
+	    SHUFFLE with_count PARTITIONED ON word AGGREGATES COUNT(count) AS count;
+	    REDUCE {
+	        // at the reducers, sum the counts for each word
+	        output = GROUP with_count BY word AGGREGATES SUM(count) AS count;
+	    }
+	    // store the output using TEXT format
+	    STORE output INTO "output" USING TEXT();
+	END
+
+Parsing and Compiling the Script
+---------------------------------
+Since this is our first example, we will take it slow and make sure that the script parses and compiles correctly. Of course, we don't *have to* go through these step each time -- we can directly execute the program, as discussed in next section.
+
+The first step is preprocessing the Cubert script, which replaces the macro variables (*$CUBERT_HOME* in the example) and executes statements within backticks (not shown in the above script) as bash commands. We can inspect the output after preprocessing by supplying the *-s* flag.
+
+.. code-block:: bash
+
+	> $CUBERT_HOME/bin/cubert wordcount.cmr -s
+	...
+	MAP {
+		data = LOAD "/path/to/cubert/release//examples/words.txt" USING TEXT("schema": "STRING word");
+	...
+
+See :ref:`preprocessing` on how Cubert preprocesses the script.
+
+The next step is parsing the Cubert script (which converts the program into JSON representation). The *-p* flag parses the script and exits. We can additionally supply the *-j* to view the JSON version of the script.
+
+.. code-block:: bash
+
+ 	> $CUBERT_HOME/bin/cubert wordcount.cmr -p
+	# Any parsing problem will be reported here
+	
+	> $CUBERT_HOME/bin/cubert wordcount.cmr -pj   # parse and show the JSON representation
+	
+The next step is to compile the program (in JSON format), where the Cubert compiler rewrites some portion of the program and applies some optimizations. The output is also in JSON format. The *-c* option instructs cubert to exit after compiling the program, and the additional *-j* flag prints the compiled program in JSON. The *-d* flag prints verbose debugging information.
+
+.. code-block:: bash
+
+	> $CUBERT_HOME/bin/cubert wordcount.cmr -c
+	# Any compilation problem will be reported here
+	
+	> $CUBERT_HOME/bin/cubert wordcount.cmr -cj   # parse, compile and show the JSON representation
+	
+	> $CUBERT_HOME/bin/cubert wordcount.cmr -cd   # parse, compile and print debugging information
+	
+If no problems are reported, we are good to go to execute the program!
+
+Running the Script
+---------------------
+If *-s* (stop after preprocessing), *-p* (stop after parsing) and *-c* (stop after compiling) flags are not given, cubert executes the entire script. The Map-Reduce jobs are executed sequentially one a time, in the order they appear in the script.
+
+.. code-block:: bash
+
+ 	> $CUBERT_HOME/bin/cubert  wordcount.cmr   # -j and -d options can be optionally provided
+	# the script executes
+	
+We can also selectively execute only job only using the *-x* command line flag. The flag takes integer or string as argument: if integer, only the job at that index is executed (job index start from 0); when string, the job with that name is executed. We don't have to give the full name of the job, we can provide some substring of the name as well. For the script shown above, all the following command line flags will execute the first job:
+
+.. code-block:: bash
+
+	> $CUBERT_HOME/bin/cubert  wordcount.cmr  -x 0
+	> $CUBERT_HOME/bin/cubert  wordcount.cmr  -x "our first program"
+	> $CUBERT_HOME/bin/cubert  wordcount.cmr  -x "first"

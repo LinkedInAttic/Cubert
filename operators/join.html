@@ -1,0 +1,245 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Join Operators &mdash; Cubert 0.1.0 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="Cubert 0.1.0 documentation" href="../index.html"/>
+        <link rel="up" title="Cubert Operators" href="index.html"/>
+        <link rel="next" title="Aggregation Operators" href="aggregation.html"/>
+        <link rel="prev" title="Builtin Functions" href="builtin_functions.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="../index.html" class="fa fa-home"> Cubert</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installing Cubert</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../install.html#upgrading-cubert">Upgrading Cubert</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../wordcount.html">Our First Cubert Program</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../wordcount.html#the-cubert-map-reduce-cmr-script">The Cubert Map-Reduce (.cmr) Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../wordcount.html#parsing-and-compiling-the-script">Parsing and Compiling the Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../wordcount.html#running-the-script">Running the Script</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../cmr_language_reference.html">Cubert Map-Reduce Language Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../cmr_language_reference.html#structure-of-a-cubert-program">Structure of a Cubert Program</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cmr_language_reference.html#word-count-in-cubert">Word Count in Cubert</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../concepts/index.html">Understanding Cubert Concepts</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/blocks.html">Partitioned Blocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/coblocks.html">Co-partitioned Blocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/rubixtool.html">Analyzing Rubix File with <em>rubixtool</em></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/grouping_sets.html">Aggregation: Cube and Grouping Sets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/conditions.html">Operator Preconditions</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Cubert Operators</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="load_store.html">Input/Output Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="processing.html">Processing Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="builtin_functions.html">Builtin Functions</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">Join Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aggregation.html">Aggregation Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dictionary.html">Dictionary Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="blocks.html">Block Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="shuffle.html">Shuffle Operators</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../userdefined/index.html">Extending Cubert</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/functions.html">User Defined Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/aggregations.html">User Defined Aggregation Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/operators.html">Adding new Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../userdefined/storage.html">Adding new Storage Formats</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../patterns/index.html">Typical Patterns</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../patterns/union.html">UNION Pattern</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../javadoc.html">Javadoc</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../publications.html">Publications and Presentations</a></li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">Cubert</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="index.html">Cubert Operators</a> &raquo;</li>
+      
+    <li>Join Operators</li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <div class="section" id="join-operators">
+<h1>Join Operators<a class="headerlink" href="#join-operators" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="merge-join">
+<h2>(Merge) JOIN<a class="headerlink" href="#merge-join" title="Permalink to this headline">¶</a></h2>
+<p>JOIN operator performs a merge join on the two input relations on the specified join keys. The output of this operator returns the joined result, where each tuple will have columns from both the input relations, but their names will be the concatenation of the &lt;inputname&gt; + &#8220;___&#8221; (3 underscores) + columnname.</p>
+<p>Example usages:</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="c1">// inner join; default</span>
+<span class="n">joined_dataset</span> <span class="o">=</span> <span class="n">JOIN</span> <span class="n">relation1</span> <span class="n">BY</span> <span class="n">joinKey1</span><span class="o">,</span> <span class="n">relation2</span> <span class="n">BY</span> <span class="n">joinKey2</span><span class="o">;</span>
+
+<span class="c1">// left outer join</span>
+<span class="n">joined_dataset</span> <span class="o">=</span> <span class="n">JOIN</span> <span class="n">LEFT</span> <span class="n">OUTER</span> <span class="n">relation1</span> <span class="n">BY</span> <span class="n">joinKey1</span><span class="o">,</span> <span class="n">relation2</span> <span class="n">BY</span> <span class="n">joinKey2</span><span class="o">;</span>
+
+<span class="c1">// right outer join</span>
+<span class="n">joined_dataset</span> <span class="o">=</span> <span class="n">JOIN</span> <span class="n">RIGHT</span> <span class="n">OUTER</span> <span class="n">relation1</span> <span class="n">BY</span> <span class="n">joinKey1</span><span class="o">,</span> <span class="n">relation2</span> <span class="n">BY</span> <span class="n">joinKey2</span><span class="o">;</span>
+
+<span class="c1">// full outer join</span>
+<span class="n">joined_dataset</span> <span class="o">=</span> <span class="n">JOIN</span> <span class="n">FULL</span> <span class="n">OUTER</span> <span class="n">relation1</span> <span class="n">BY</span> <span class="n">joinKey1</span><span class="o">,</span> <span class="n">relation2</span> <span class="n">BY</span> <span class="n">joinKey2</span><span class="o">;</span>
+</pre></div>
+</div>
+<p>PRECONDITIONS: Both relations must be <em>partitioned</em> and <em>sorted</em> on the join keys.</p>
+</div>
+<div class="section" id="hash-join">
+<h2>HASH-JOIN<a class="headerlink" href="#hash-join" title="Permalink to this headline">¶</a></h2>
+<p>HASH-JOIN operator performs a HASH JOIN of the input relations by loading the right relation into a hash table. It takes two relations and their corresponding join keys as inputs. It returns all the tuples in the joined results, where each tuple will have columns from both the input relations, but their names will be the concatenation of the &lt;inputname&gt; + &#8220;___&#8221; (3 underscores) + columnname.</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="c1">// inner join; default</span>
+<span class="n">joined_dataset</span> <span class="o">=</span> <span class="n">HASH</span><span class="o">-</span><span class="n">JOIN</span> <span class="n">relation1</span> <span class="n">BY</span> <span class="n">joinKey1</span><span class="o">,</span> <span class="n">relation2</span> <span class="n">BY</span> <span class="n">joinKey2</span><span class="o">;</span>
+
+<span class="c1">// outer joins</span>
+<span class="n">joined_dataset</span> <span class="o">=</span> <span class="n">HASH</span><span class="o">-</span><span class="n">JOIN</span> <span class="n">LEFT</span> <span class="n">OUTER</span> <span class="n">relation1</span> <span class="n">BY</span> <span class="n">joinKey1</span><span class="o">,</span> <span class="n">relation2</span> <span class="n">BY</span> <span class="n">joinKey2</span><span class="o">;</span>
+<span class="n">joined_dataset</span> <span class="o">=</span> <span class="n">HASH</span><span class="o">-</span><span class="n">JOIN</span> <span class="n">RIGHT</span> <span class="n">OUTER</span> <span class="n">relation1</span> <span class="n">BY</span> <span class="n">joinKey1</span><span class="o">,</span> <span class="n">relation2</span> <span class="n">BY</span> <span class="n">joinKey2</span><span class="o">;</span>
+<span class="n">joined_dataset</span> <span class="o">=</span> <span class="n">HASH</span><span class="o">-</span><span class="n">JOIN</span> <span class="n">FULL</span> <span class="n">OUTER</span> <span class="n">relation1</span> <span class="n">BY</span> <span class="n">joinKey1</span><span class="o">,</span> <span class="n">relation2</span> <span class="n">BY</span> <span class="n">joinKey2</span><span class="o">;</span>
+</pre></div>
+</div>
+<p>PRECONDITIONS: None.</p>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="aggregation.html" class="btn btn-neutral float-right" title="Aggregation Operators"/>Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="builtin_functions.html" class="btn btn-neutral" title="Builtin Functions"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2014, LinkedIn Cubert Team.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

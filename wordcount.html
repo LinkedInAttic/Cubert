@@ -1,0 +1,277 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Our First Cubert Program &mdash; Cubert 0.1.0 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="Cubert 0.1.0 documentation" href="index.html"/>
+        <link rel="next" title="Cubert Map-Reduce Language Reference" href="cmr_language_reference.html"/>
+        <link rel="prev" title="Installing Cubert" href="install.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="index.html" class="fa fa-home"> Cubert</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installing Cubert</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="install.html#upgrading-cubert">Upgrading Cubert</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Our First Cubert Program</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#the-cubert-map-reduce-cmr-script">The Cubert Map-Reduce (.cmr) Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#parsing-and-compiling-the-script">Parsing and Compiling the Script</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running-the-script">Running the Script</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cmr_language_reference.html">Cubert Map-Reduce Language Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="cmr_language_reference.html#structure-of-a-cubert-program">Structure of a Cubert Program</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cmr_language_reference.html#word-count-in-cubert">Word Count in Cubert</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="concepts/index.html">Understanding Cubert Concepts</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="concepts/blocks.html">Partitioned Blocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="concepts/coblocks.html">Co-partitioned Blocks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="concepts/rubixtool.html">Analyzing Rubix File with <em>rubixtool</em></a></li>
+<li class="toctree-l2"><a class="reference internal" href="concepts/grouping_sets.html">Aggregation: Cube and Grouping Sets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="concepts/conditions.html">Operator Preconditions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="operators/index.html">Cubert Operators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="operators/load_store.html">Input/Output Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operators/processing.html">Processing Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operators/builtin_functions.html">Builtin Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operators/join.html">Join Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operators/aggregation.html">Aggregation Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operators/dictionary.html">Dictionary Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operators/blocks.html">Block Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operators/shuffle.html">Shuffle Operators</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="userdefined/index.html">Extending Cubert</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="userdefined/functions.html">User Defined Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="userdefined/aggregations.html">User Defined Aggregation Functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="userdefined/operators.html">Adding new Operators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="userdefined/storage.html">Adding new Storage Formats</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="patterns/index.html">Typical Patterns</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="patterns/union.html">UNION Pattern</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="javadoc.html">Javadoc</a></li>
+<li class="toctree-l1"><a class="reference internal" href="publications.html">Publications and Presentations</a></li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">Cubert</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Our First Cubert Program</li>
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <div class="section" id="our-first-cubert-program">
+<h1>Our First Cubert Program<a class="headerlink" href="#our-first-cubert-program" title="Permalink to this headline">¶</a></h1>
+<p>We will look at the standard <strong>Word Count</strong> problem (counting the number of occurrences of each word in a document). The cubert script is available at <em>$CUBERT_HOME/examples/wordcount.cmr</em>.</p>
+<div class="section" id="the-cubert-map-reduce-cmr-script">
+<h2>The Cubert Map-Reduce (.cmr) Script<a class="headerlink" href="#the-cubert-map-reduce-cmr-script" title="Permalink to this headline">¶</a></h2>
+<p>The following shows the complete script for computing word counts. Take a look at the <a class="reference internal" href="cmr_language_reference.html#script-reference"><em>Cubert Map-Reduce Language Reference</em></a> section to follow the syntax of this script.</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="n">JOB</span> <span class="s">&quot;word count job&quot;</span>
+    <span class="n">REDUCERS</span> <span class="mi">10</span><span class="o">;</span>
+    <span class="n">MAP</span> <span class="o">{</span>
+        <span class="c1">// load the input data set as a TEXT file</span>
+        <span class="n">input</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;$CUBERT_HOME/examples/words.txt&quot;</span> <span class="n">USING</span> <span class="n">TEXT</span><span class="o">(</span><span class="s">&quot;schema&quot;</span><span class="o">:</span> <span class="s">&quot;STRING word&quot;</span><span class="o">);</span>
+        <span class="c1">// add a column to each tuple</span>
+        <span class="n">with_count</span> <span class="o">=</span> <span class="n">FROM</span> <span class="n">input</span> <span class="n">GENERATE</span> <span class="n">word</span><span class="o">,</span> <span class="mi">1</span> <span class="n">AS</span> <span class="n">count</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="c1">// shuffle the data and also invoke combiner to aggregate on map-side</span>
+    <span class="n">SHUFFLE</span> <span class="n">with_count</span> <span class="n">PARTITIONED</span> <span class="n">ON</span> <span class="n">word</span> <span class="n">AGGREGATES</span> <span class="nf">COUNT</span><span class="o">(</span><span class="n">count</span><span class="o">)</span> <span class="n">AS</span> <span class="n">count</span><span class="o">;</span>
+    <span class="n">REDUCE</span> <span class="o">{</span>
+        <span class="c1">// at the reducers, sum the counts for each word</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">GROUP</span> <span class="n">with_count</span> <span class="n">BY</span> <span class="n">word</span> <span class="n">AGGREGATES</span> <span class="n">SUM</span><span class="o">(</span><span class="n">count</span><span class="o">)</span> <span class="n">AS</span> <span class="n">count</span><span class="o">;</span>
+    <span class="o">}</span>
+    <span class="c1">// store the output using TEXT format</span>
+    <span class="n">STORE</span> <span class="n">output</span> <span class="n">INTO</span> <span class="s">&quot;output&quot;</span> <span class="n">USING</span> <span class="n">TEXT</span><span class="o">();</span>
+<span class="n">END</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="parsing-and-compiling-the-script">
+<h2>Parsing and Compiling the Script<a class="headerlink" href="#parsing-and-compiling-the-script" title="Permalink to this headline">¶</a></h2>
+<p>Since this is our first example, we will take it slow and make sure that the script parses and compiles correctly. Of course, we don&#8217;t <em>have to</em> go through these step each time &#8211; we can directly execute the program, as discussed in next section.</p>
+<p>The first step is preprocessing the Cubert script, which replaces the macro variables (<em>$CUBERT_HOME</em> in the example) and executes statements within backticks (not shown in the above script) as bash commands. We can inspect the output after preprocessing by supplying the <em>-s</em> flag.</p>
+<div class="highlight-bash"><div class="highlight"><pre>&gt; <span class="nv">$CUBERT_HOME</span>/bin/cubert wordcount.cmr -s
+...
+MAP <span class="o">{</span>
+        <span class="nv">data</span> <span class="o">=</span> LOAD <span class="s2">&quot;/path/to/cubert/release//examples/words.txt&quot;</span> USING TEXT<span class="o">(</span><span class="s2">&quot;schema&quot;</span>: <span class="s2">&quot;STRING word&quot;</span><span class="o">)</span>;
+...
+</pre></div>
+</div>
+<p>See <em class="xref std std-ref">preprocessing</em> on how Cubert preprocesses the script.</p>
+<p>The next step is parsing the Cubert script (which converts the program into JSON representation). The <em>-p</em> flag parses the script and exits. We can additionally supply the <em>-j</em> to view the JSON version of the script.</p>
+<div class="highlight-bash"><div class="highlight"><pre>&gt; <span class="nv">$CUBERT_HOME</span>/bin/cubert wordcount.cmr -p
+<span class="c"># Any parsing problem will be reported here</span>
+
+&gt; <span class="nv">$CUBERT_HOME</span>/bin/cubert wordcount.cmr -pj   <span class="c"># parse and show the JSON representation</span>
+</pre></div>
+</div>
+<p>The next step is to compile the program (in JSON format), where the Cubert compiler rewrites some portion of the program and applies some optimizations. The output is also in JSON format. The <em>-c</em> option instructs cubert to exit after compiling the program, and the additional <em>-j</em> flag prints the compiled program in JSON. The <em>-d</em> flag prints verbose debugging information.</p>
+<div class="highlight-bash"><div class="highlight"><pre>&gt; <span class="nv">$CUBERT_HOME</span>/bin/cubert wordcount.cmr -c
+<span class="c"># Any compilation problem will be reported here</span>
+
+&gt; <span class="nv">$CUBERT_HOME</span>/bin/cubert wordcount.cmr -cj   <span class="c"># parse, compile and show the JSON representation</span>
+
+&gt; <span class="nv">$CUBERT_HOME</span>/bin/cubert wordcount.cmr -cd   <span class="c"># parse, compile and print debugging information</span>
+</pre></div>
+</div>
+<p>If no problems are reported, we are good to go to execute the program!</p>
+</div>
+<div class="section" id="running-the-script">
+<h2>Running the Script<a class="headerlink" href="#running-the-script" title="Permalink to this headline">¶</a></h2>
+<p>If <em>-s</em> (stop after preprocessing), <em>-p</em> (stop after parsing) and <em>-c</em> (stop after compiling) flags are not given, cubert executes the entire script. The Map-Reduce jobs are executed sequentially one a time, in the order they appear in the script.</p>
+<div class="highlight-bash"><div class="highlight"><pre>&gt; <span class="nv">$CUBERT_HOME</span>/bin/cubert  wordcount.cmr   <span class="c"># -j and -d options can be optionally provided</span>
+<span class="c"># the script executes</span>
+</pre></div>
+</div>
+<p>We can also selectively execute only job only using the <em>-x</em> command line flag. The flag takes integer or string as argument: if integer, only the job at that index is executed (job index start from 0); when string, the job with that name is executed. We don&#8217;t have to give the full name of the job, we can provide some substring of the name as well. For the script shown above, all the following command line flags will execute the first job:</p>
+<div class="highlight-bash"><div class="highlight"><pre>&gt; <span class="nv">$CUBERT_HOME</span>/bin/cubert  wordcount.cmr  -x 0
+&gt; <span class="nv">$CUBERT_HOME</span>/bin/cubert  wordcount.cmr  -x <span class="s2">&quot;our first program&quot;</span>
+&gt; <span class="nv">$CUBERT_HOME</span>/bin/cubert  wordcount.cmr  -x <span class="s2">&quot;first&quot;</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="cmr_language_reference.html" class="btn btn-neutral float-right" title="Cubert Map-Reduce Language Reference"/>Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="install.html" class="btn btn-neutral" title="Installing Cubert"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2014, LinkedIn Cubert Team.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1.0',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
