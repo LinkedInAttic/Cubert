@@ -1,22 +1,29 @@
 
 **Cubert is a fast and efficient batch computation engine for complex analysis and reporting of massive datasets on Hadoop**.
 
-Cubert is a novel approach for batch computation on Hadoop:
+[Cubert Documentation](http://linkedin.github.io/Cubert) hosted at github.
 
-1. A novel model of data organization into **Partitioned Data Units or blocks**.
-	* One of the distinguishing feature of Cubert, compared to related data flow and relational paradigms is that rather than tuple-oriented processing, Cubert defines a notion of Block and applies operators to blocks.
-	* Blocks are partitions of original data, are internally sorted, and generated using some cost function.
-	* Cubert provides a new BLOCKGEN operator to organize data.
-2. Set of **operators that are designed to be efficient**.
-	* Includes new operators such as BLOCKGEN, PIVOT, CUBE, TEE and others.
-	* Memory-efficient implementations of operators.
-	* With the ability to write custom operators.
-3. A concise **scripting language** and runtime to execute operators.
-	* Can write Map-Reduce programs using simple scripting grammar, without touching any programming language code.
-	* Provides flexibility and power to understand and control the flow of data.
-	* Compatible with Pig User Defined Functions (UDFs).
+Cubert is ideally suited for the following application domains:
 
-Cubert has applications in several domains including Time range calculations, Complex join processing of large datasets, Statistics calculations and aggregations, OLAP Cubes and grouping sets, and Graph computations.
+1. **Statistical Calculations, Joins and Aggregations**
+
+	Cubert introduces a new model of computation that allows users to organize data in a format  that is ideally suited for scalable  execution of subsequent query processing operators, and a set of **algorithmically-efficient** operators (MeshJoin and CUBE) that exploit the organization to provide significantly improved CPU and resource utilization compared to existing solutions.
+
+2. **Cubes and Grouping Set Aggregations**
+	
+	The power-horse is the new CUBE operator that can efficiently (CPU and memory) compute additive, non-additive (e.g. Count Distinct) and exact percentile rank (e.g. Median) statistics; can roll up inner dimensions on-the-fly and compute multiple measures within a single job. 
+	
+3. **Time range calculation and Incremental computations**
+
+	Cubert primitives are specially suited for reporting workflows that employ computation pattern that is both regular and repetitive, allowing for efficiency gains from partial result caching and incremental processing.
+	
+4. **Graph computations**
+
+	Cubert provides a novel sparse matrix multiplication algorithm that is best suited for analytics with large-scale graphs.
+	
+5. **When performance or resources are a matter of concern**
+
+	Cubert Script is a developer-friendly language that takes out the hints, guesswork and surprises when running the script. The script provides the developers complete control over the execution plan (without resorting to low-level programming!), and is extremely extensible by adding new functions, aggregators and even operators.  
 
 
 A flavor of Cubert Script
@@ -91,3 +98,10 @@ Coming (really) soon..
 * **Cubert Script v2**: a DAG oriented language to express complex composition of workflows.
 * **Incremental computations**: daily running jobs that read multiple days of data can materialize partial output and incrementally compute the results (thus cutting down on resources and time).
 * **Analytical window functions**.
+
+Documentation
+--------------
+
+Users Guide and Javadoc available at
+
+[http://linkedin.github.io/Cubert](http://linkedin.github.io/Cubert)

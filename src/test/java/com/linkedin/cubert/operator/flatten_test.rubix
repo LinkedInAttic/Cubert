@@ -1,0 +1,58 @@
+/* (c) 2014 LinkedIn Corp. All rights reserved.
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+ * this file except in compliance with the License. You may obtain a copy of the
+ * License at  http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed
+ * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+ * CONDITIONS OF ANY KIND, either express or implied.
+ */
+
+PROGRAM "xlnt pld dimensions ";
+
+
+SET mapred.child.java.opts  "-Xmx1G -Djava.net.preferIPv4Stack=true -Duser.timezone=America/Los_Angeles";
+SET mapred.map.tasks.speculative.execution "true";
+SET mapred.reduce.tasks.speculative.execution "true";
+
+
+REGISTER "/Users/ruliu/libjars/avro-1.7.4.jar";
+REGISTER "/Users/ruliu/libjars/avro-mapred-1.7.4.jar";
+REGISTER "/Users/ruliu/libjars/paranamer-2.3.jar";
+REGISTER "/Users/ruliu/libjars/linkedin-pig-0.11.1-li0.jar";
+REGISTER "/Users/ruliu/libjars/pig-0.11.1-li0.jar";
+REGISTER "/Users/ruliu/libjars/joda-time-2.1.jar";
+REGISTER "/Users/ruliu/libjars/dwh-udf.jar";
+REGISTER "/Users/ruliu/libjars/automaton-1.11-8.jar";
+
+
+
+JOB "EUC blockgen 1"
+        REDUCERS 10;
+        MAP {
+                euc = LOAD "/Users/ruliu/base2/member_dimensions_notflatten" USING AVRO;
+				f = FLATTEN euc BY  dimension_profile_viewers_count BAG_TUPLE as (dimension_profile_viewers_count:STRING),
+										dimension_positions_count BAG_TUPLE as (dimension_positions_count:STRING),
+										dimension_is_recruiter BAG_TUPLE as  (dimension_is_recruiter:STRING),
+										dimension_registration_date BAG_TUPLE as (dimension_registration_date:STRING),
+										dimension_current_positions_count BAG_TUPLE as (dimension_current_positions_count:STRING),
+										dimension_country_code BAG_TUPLE as (dimension_country_code:STRING),
+										dimension_has_profile_picture BAG_TUPLE as (dimension_has_profile_picture:STRING),
+										dimension_is_student BAG_TUPLE as (dimension_is_student:STRING),
+										dimension_is_general_talent_professional BAG_TUPLE as (dimension_is_general_talent_professional:STRING),
+										dimension_used_pymk BAG_TUPLE as (dimension_used_pymk:STRING),
+										dimension_connection_count BAG_TUPLE as (dimension_connection_count:STRING),
+										dimension_school_count BAG_TUPLE as (dimension_school_count:STRING),
+										dimension_subscription_plan_id BAG_TUPLE as (dimension_subscription_plan_id:STRING),
+										dimension_interface_locale BAG_TUPLE as (dimension_interface_locale:STRING),
+										dimension_is_active BAG_TUPLE as (dimension_is_active:STRING);
+										
+										
+                
+        }
+        
+        BLOCKGEN f BY ROW 3000000 PARTITIONED ON id SORTED ON id, dimension_connection_count , dimension_country_code ;
+       
+        STORE f INTO "/Users/ruliu/base4/test" USING AVRO;
+END

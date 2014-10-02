@@ -1,0 +1,110 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+
+
+ext.isDefaultEnvironment = !project.hasProperty('overrideBuildEnvironment')
+File getEnvironmentScript()
+{
+  final File env = file(isDefaultEnvironment ? 'defaultEnvironment.gradle' : project.overrideBuildEnvironment)
+  assert env.isFile() : "The environment script [$env] does not exists or is not a file."
+  return env
+}
+
+apply from: environmentScript
+
+
+repositories {
+	mavenCentral()
+}
+  
+defaultTasks 'dist'
+
+/**
+ * Adding a new Collection to configurations
+ * jars that have to be added to fat jar
+ */
+configurations {
+    fatjar {
+        transitive = false
+    }
+}
+
+dependencies {
+	/* Dependencies for compile collection */
+	compile "org.apache.hadoop:hadoop-client:$hadoopVersion"
+	compile "org.apache.pig:pig:$pigVersion"
+	compile "org.apache.avro:avro:$avroVersion"
+	compile "org.apache.avro:avro-mapred:$avroMapredVersion"
+	compile "org.antlr:antlr4:$antlrVersion"
+	compile "org.antlr:antlr4-runtime:$antlrVersion"
+	compile "dk.brics.automaton:automaton:1.11-8"
+	compile "joda-time:joda-time:$jodaVersion"
+	compile "com.googlecode.json-simple:json-simple:1.1"
+
+	/* Dependencies for testCompile collection */
+	testCompile "org.testng:testng:6.8.5"
+	
+    /* Dependencies for fat jar collection */
+	fatjar "org.apache.pig:pig:$pigVersion"
+	fatjar "joda-time:joda-time:$jodaVersion"
+	fatjar "com.googlecode.json-simple:json-simple:1.1"
+	fatjar "org.apache.avro:avro:$avroVersion"
+	fatjar "org.apache.avro:avro-mapred:$avroMapredVersion"
+	fatjar "org.antlr:antlr4-runtime:$antlrVersion"
+	fatjar "dk.brics.automaton:automaton:1.11-8"
+}
+
+/** 
+ * Generate parser code from antlr grammar
+ */
+task genParser(type: JavaExec) {
+    ext.src = file('src/main/antlr4/CubertPhysical.g4')
+    ext.dst = file('src/main/java/com/linkedin/cubert/antlr4/')
+
+    inputs.file ext.src
+    outputs.dir ext.dst
+
+    main = 'org.antlr.v4.Tool'
+    args '-o'
+    args ext.dst.absolutePath
+    args ext.src.absolutePath
+    classpath = configurations.compile
+}
+
+/** 
+ * Create the fat jar
+ */
+jar {
+	from (configurations.fatjar.collect { zipTree(it) }) {
+		exclude "META-INF/*.SF"
+		exclude "META-INF/*.DSA"
+		exclude "META-INF/*.RSA"
+	}
+}
+
+task dist(type: Copy) {
+	outputs.dir "release/lib"
+
+/*
+    from configurations.compile
+	into 'release/lib'
+    include '*.jar'
+*/
+    from "$buildDir/libs"
+    into "release/lib"
+    include '*.jar'
+}
+
+test {
+    maxHeapSize = '3096m'
+    useTestNG() {
+    }
+}
+
+javadoc {
+	exclude "**/piggybank/**"
+}
+
+compileJava.dependsOn genParser
+dist.dependsOn jar
+clean.dependsOn cleanDist

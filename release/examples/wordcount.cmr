@@ -1,0 +1,14 @@
+PROGRAM "Word Count";
+
+JOB "count words"
+	REDUCERS 5;
+	MAP {
+		data = LOAD "$CUBERT_HOME/examples/words.txt" USING TEXT("schema": "STRING word");
+		with_count = FROM data GENERATE word, 1L AS count;
+	}
+	SHUFFLE with_count PARTITIONED ON word AGGREGATES COUNT(word) AS count;
+	REDUCE {
+		counted = GROUP with_count BY word AGGREGATES SUM(count) AS count;
+	}
+	STORE counted INTO "output" USING TEXT();
+END
