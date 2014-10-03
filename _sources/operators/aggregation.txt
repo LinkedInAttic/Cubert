@@ -80,7 +80,7 @@ Optionally the grouping sets can be specified, listing the group by key combinat
     REDUCERS 10; 
     MAP {
         // load the fact table
-        data = LOAD "$inputFactTable" USING CubertStore;
+        data = LOAD "$inputFactTable" USING RUBIX;
         data = FROM data GENERATE memberId, search_type, platform_type, country_sk, locale_sk, 
                                   CASE (date_sk == "2014-02-06", memberId) AS todayMemberId;
  

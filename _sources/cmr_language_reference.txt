@@ -136,7 +136,7 @@ Let us now walk through the word count script we discussed in previous section (
 
 * The Map phase starts with the load command. In this case, we are loading *$CUBERT_HOME/examples/words.txt* as a text file. We also specify the schema of the input.
 * The LOAD command supports loading daily/hourly data by providing time ranges, filenames with #LATEST or \*, or multiple files.
-* In addition to TEXT format, cubert can also load AVRO and CubertStore file formats. For these two formats, it is not required to supply the schema (cubert will automatically fetch schema from the data files).
+* In addition to TEXT format, cubert can also load AVRO and RUBIX file formats. For these two formats, it is not required to supply the schema (cubert will automatically fetch schema from the data files).
 * After the load command, there is one operator that adds a column to the rows.
 
 **Shuffle Phase**
@@ -152,7 +152,7 @@ Let us now walk through the word count script we discussed in previous section (
 **Store Command**
 
 * The output is stored in text format in the specified folder.
-* Cubert can store data in AVRO and CubertStore format as well.
+* Cubert can store data in AVRO and RUBIX format as well.
 
 
 .. note:: About Variable Scope

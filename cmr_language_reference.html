@@ -263,7 +263,7 @@
 <ul class="simple">
 <li>The Map phase starts with the load command. In this case, we are loading <em>$CUBERT_HOME/examples/words.txt</em> as a text file. We also specify the schema of the input.</li>
 <li>The LOAD command supports loading daily/hourly data by providing time ranges, filenames with #LATEST or *, or multiple files.</li>
-<li>In addition to TEXT format, cubert can also load AVRO and CubertStore file formats. For these two formats, it is not required to supply the schema (cubert will automatically fetch schema from the data files).</li>
+<li>In addition to TEXT format, cubert can also load AVRO and RUBIX file formats. For these two formats, it is not required to supply the schema (cubert will automatically fetch schema from the data files).</li>
 <li>After the load command, there is one operator that adds a column to the rows.</li>
 </ul>
 <p><strong>Shuffle Phase</strong></p>
@@ -279,7 +279,7 @@
 <p><strong>Store Command</strong></p>
 <ul class="simple">
 <li>The output is stored in text format in the specified folder.</li>
-<li>Cubert can store data in AVRO and CubertStore format as well.</li>
+<li>Cubert can store data in AVRO and RUBIX format as well.</li>
 </ul>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>

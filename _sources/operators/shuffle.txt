@@ -95,7 +95,7 @@ This operator can also compute count distinct by specifying the measure as the p
 .. code-block:: java
 
     MAP {
-       cube = LOAD "$inputFactTable" USING CubertStore;
+       cube = LOAD "$inputFactTable" USING RUBIX;
     }
     // computes full OLAP cube
     CUBE cube BY PageKey, ProductPageKeyGroup, Locale, Platform PARTITIONED ON ContextId 

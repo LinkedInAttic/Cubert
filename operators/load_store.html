@@ -158,7 +158,7 @@
 <li>a path with one or more <em>*</em> (e.g. &#8220;/path/to/dir/*&#8221;)</li>
 <li>multiple comma-separate paths of any of the above type (e.g. &#8220;path1&#8221;, (&#8220;path2/daily&#8221;, 20140101, 20140102), &#8220;path3/#LATEST&#8221; )</li>
 </ul>
-<p>Cubert supports three file formats: Apache AVRO, TEXT, and CubertStore. These formats can be optionally configured using the key-value arguments. The supports properties are:</p>
+<p>Cubert supports three file formats: Apache AVRO, TEXT, and RUBIX. These formats can be optionally configured using the key-value arguments. The supports properties are:</p>
 <ul class="simple">
 <li>&#8220;unsplittable&#8221;: &#8220;true&#8221; or &#8220;false&#8221; (default: &#8220;false&#8221;). If true, do not split a file (create one mapper per file). Supported by AVRO format.</li>
 <li>&#8220;separator&#8221;: &lt;string&gt; (default: &#8221;,&#8221;). Field separator string in a text record. Supported by TEXT format.</li>
@@ -177,11 +177,11 @@
 <span class="c1">// loading TEXT data with a specified separator. tab is the default separator.</span>
 <span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;$inputdir&quot;</span> <span class="n">USING</span> <span class="n">TEXT</span><span class="o">(</span><span class="s">&quot;separator&quot;</span><span class="o">:</span><span class="s">&quot;\u001A&quot;</span><span class="o">,</span> <span class="s">&quot;schema&quot;</span><span class="o">:</span> <span class="s">&quot;LONG member_sk, LONG count&quot;</span><span class="o">);</span>
 
-<span class="c1">// loading CubertStore data:</span>
-<span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;$inputdir&quot;</span> <span class="n">USING</span> <span class="n">CubertStore</span><span class="o">;</span>
+<span class="c1">// loading RUBIX data:</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;$inputdir&quot;</span> <span class="n">USING</span> <span class="n">RUBIX</span><span class="o">;</span>
 </pre></div>
 </div>
-<p>The AVRO and CubertStore formats will automatically infer the schema of the input data. However, for the TEXT input format, we need to specify the schema of the data (using the &#8220;schema&#8221; parameter).</p>
+<p>The AVRO and RUBIX formats will automatically infer the schema of the input data. However, for the TEXT input format, we need to specify the schema of the data (using the &#8220;schema&#8221; parameter).</p>
 </div>
 <div class="section" id="store">
 <h2>STORE<a class="headerlink" href="#store" title="Permalink to this headline">¶</a></h2>
@@ -189,15 +189,15 @@
 <p>The optional argument for the STORE operators are:</p>
 <ul class="simple">
 <li>&#8220;overwrite&#8221;: &#8220;true&#8221; or &#8220;false&#8221; (default: &#8220;false&#8221;). If true, silently delete existing folder. Supported by all formats.</li>
-<li>&#8220;compact&#8221;: &#8220;true&#8221; or &#8220;false&#8221; (default: &#8220;false&#8221;). If true, write data in compact variable byte encoding. Supported by CubertStore format.</li>
+<li>&#8220;compact&#8221;: &#8220;true&#8221; or &#8220;false&#8221; (default: &#8220;false&#8221;). If true, write data in compact variable byte encoding. Supported by RUBIX format.</li>
 <li>&#8220;separator&#8221;: &lt;string&gt; (default: &#8221;,&#8221;). Field separator string in a text record. Supported by TEXT format.</li>
 </ul>
 <p>Here are a few examples to illustrate.</p>
 <div class="highlight-java"><div class="highlight"><pre><span class="c1">// store data in a directory in AVRO format::</span>
 <span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;$outputdir&quot;</span> <span class="n">USING</span> <span class="n">AVRO</span><span class="o">;</span>
 
-<span class="c1">// storing in CubertStore format::</span>
-<span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;$outputdir&quot;</span> <span class="n">USING</span> <span class="n">CubertStore</span><span class="o">(</span><span class="s">&quot;overwrite&quot;</span><span class="o">:</span> <span class="s">&quot;true&quot;</span><span class="o">);</span>
+<span class="c1">// storing in RUBIX format::</span>
+<span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;$outputdir&quot;</span> <span class="n">USING</span> <span class="n">RUBIX</span><span class="o">(</span><span class="s">&quot;overwrite&quot;</span><span class="o">:</span> <span class="s">&quot;true&quot;</span><span class="o">);</span>
 
 <span class="c1">// storing in TEXT format::</span>
 <span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;$outputdir&quot;</span> <span class="n">USING</span> <span class="n">TEXT</span><span class="o">(</span><span class="s">&quot;separator&quot;</span><span class="o">:</span><span class="s">&quot;\u001A&quot;</span><span class="o">);</span>

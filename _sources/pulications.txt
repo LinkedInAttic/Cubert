@@ -1,6 +1,0 @@
-Publications and Presentations
-=================================
-
-* "**Execution Primitives for Scalable Joins and Aggregations in Map Reduce**", *Srinivas Vemuri, Maneesh Varshney, Krishna Puttaswamy, Rui Liu*. 40th International Conference on Very Large Data Bases (**VLDB**), Hangzhou, China, Sept 2014. (`PDF Paper <_static/rubix_vldb.pdf>`_)
-
-* Slides presented at Box HQ open source meetup (pdf)

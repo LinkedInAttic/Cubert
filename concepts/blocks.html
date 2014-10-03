@@ -171,9 +171,9 @@
 </ul>
 </div></blockquote>
 </li>
-<li><p class="first">Storing the BLOCKGEN data in CubertStore file format: the dataset organized into blocks MUST be stored in CubertStore file format.</p>
+<li><p class="first">Storing the BLOCKGEN data in RUBIX file format: the dataset organized into blocks MUST be stored in RUBIX file format.</p>
 <blockquote>
-<div><p>CubertStore supports a custom data layout format that embeds indices and other metadata related to the BLOCKGEN process.</p>
+<div><p>RUBIX supports a custom data layout format that embeds indices and other metadata related to the BLOCKGEN process.</p>
 </div></blockquote>
 </li>
 </ol>
@@ -190,12 +190,12 @@
         <span class="c1">// (c) have a size of 1000 rows</span>
         <span class="n">BLOCKGEN</span> <span class="n">data</span> <span class="n">BY</span> <span class="n">ROW</span> <span class="mi">1000</span> <span class="n">PARTITIONED</span> <span class="n">ON</span> <span class="n">memberId</span> <span class="n">SORTED</span> <span class="n">ON</span> <span class="n">timestamp</span><span class="o">;</span>
 
-        <span class="c1">// ALWAYS store BLOCKGEN data using CubertStore file format!</span>
-        <span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;/path/to/output&quot;</span> <span class="n">USING</span> <span class="n">CubertStore</span><span class="o">();</span>
+        <span class="c1">// ALWAYS store BLOCKGEN data using RUBIX file format!</span>
+        <span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;/path/to/output&quot;</span> <span class="n">USING</span> <span class="n">RUBIX</span><span class="o">();</span>
 <span class="n">END</span>
 </pre></div>
 </div>
-<p>Note that there will be 10 data files (part-r-00000.rbx through part-r-00009.rbx), since we assigned as many number of reducers. That is to say, the CubertStore file can store more than one block in a single file. So don&#8217;t worry about the file count quota when creating 1000&#8217;s of blocks!</p>
+<p>Note that there will be 10 data files (part-r-00000.rbx through part-r-00009.rbx), since we assigned as many number of reducers. That is to say, the RUBIX file can store more than one block in a single file. So don&#8217;t worry about the file count quota when creating 1000&#8217;s of blocks!</p>
 </div>
 </div>
 

@@ -38,9 +38,9 @@ As Cubert users, we are responsible for following three actions:
 
 	As before, the sorting happens *within the blocks*. That is, the data is NOT globally sorted.
 	
-#. Storing the BLOCKGEN BY INDEX data in CubertStore file format: the dataset organized into blocks MUST be stored in CubertStore file format.
+#. Storing the BLOCKGEN BY INDEX data in RUBIX file format: the dataset organized into blocks MUST be stored in RUBIX file format.
 
-	CubertStore supports a custom data layout format that embeds indices and other metadata related to the BLOCKGEN BY INDEX process.	
+	RUBIX supports a custom data layout format that embeds indices and other metadata related to the BLOCKGEN BY INDEX process.	
 	
 Creating Co-Partitioned Blocks
 --------------------------------
@@ -56,7 +56,7 @@ The blocks are created using the BLOCKGEN shuffle command, by using the "BY INDE
 			data = LOAD "/path/to/data" USING AVRO();
 		}
 		BLOCKGEN data BY ROW 1000 PARTITIONED ON memberId SORTED ON timestamp;
-		STORE data INTO "/path/to/output" USING CubertStore();
+		STORE data INTO "/path/to/output" USING RUBIX();
 	END
 	
 	JOB "our first blockgen by index"
@@ -65,7 +65,7 @@ The blocks are created using the BLOCKGEN shuffle command, by using the "BY INDE
 			data = LOAD "/path/to/other/data" USING AVRO();
 		}
 		BLOCKGEN data BY INDEX "/path/to/output" PARTITIONED ON memberId SORTED ON some_column;
-		STORE data INTO "/path/to/other/output" USING CubertStore();
+		STORE data INTO "/path/to/other/output" USING RUBIX();
 	END
 	
 	
@@ -82,10 +82,10 @@ In the example above, we had the first dataset sorted on *timestamp*. Lets say w
 	JOB "resorting blocks"
 		REDUCERS 10;
 		MAP {
-			data = LOAD "/path/to/output" USING CubertStore();
+			data = LOAD "/path/to/output" USING RUBIX();
 		}
 		BLOCKGEN data BY INDEX "/path/to/output" PARTITIONED ON memberId SORTED ON pagekey;
-		STORE data INTO "/path/to/resorted-output" USING CubertStore();
+		STORE data INTO "/path/to/resorted-output" USING RUBIX();
 	END
 
 We just have to make sure that, (a) we use the primary dataset we use was created via BLOCKGEN process (see note above), and (b) the partition keys must be identical.

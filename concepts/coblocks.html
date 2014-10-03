@@ -169,9 +169,9 @@
 <div><p>As before, the sorting happens <em>within the blocks</em>. That is, the data is NOT globally sorted.</p>
 </div></blockquote>
 </li>
-<li><p class="first">Storing the BLOCKGEN BY INDEX data in CubertStore file format: the dataset organized into blocks MUST be stored in CubertStore file format.</p>
+<li><p class="first">Storing the BLOCKGEN BY INDEX data in RUBIX file format: the dataset organized into blocks MUST be stored in RUBIX file format.</p>
 <blockquote>
-<div><p>CubertStore supports a custom data layout format that embeds indices and other metadata related to the BLOCKGEN BY INDEX process.</p>
+<div><p>RUBIX supports a custom data layout format that embeds indices and other metadata related to the BLOCKGEN BY INDEX process.</p>
 </div></blockquote>
 </li>
 </ol>
@@ -186,7 +186,7 @@
                 <span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;/path/to/data&quot;</span> <span class="n">USING</span> <span class="n">AVRO</span><span class="o">();</span>
         <span class="o">}</span>
         <span class="n">BLOCKGEN</span> <span class="n">data</span> <span class="n">BY</span> <span class="n">ROW</span> <span class="mi">1000</span> <span class="n">PARTITIONED</span> <span class="n">ON</span> <span class="n">memberId</span> <span class="n">SORTED</span> <span class="n">ON</span> <span class="n">timestamp</span><span class="o">;</span>
-        <span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;/path/to/output&quot;</span> <span class="n">USING</span> <span class="n">CubertStore</span><span class="o">();</span>
+        <span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;/path/to/output&quot;</span> <span class="n">USING</span> <span class="n">RUBIX</span><span class="o">();</span>
 <span class="n">END</span>
 
 <span class="n">JOB</span> <span class="s">&quot;our first blockgen by index&quot;</span>
@@ -195,7 +195,7 @@
                 <span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;/path/to/other/data&quot;</span> <span class="n">USING</span> <span class="n">AVRO</span><span class="o">();</span>
         <span class="o">}</span>
         <span class="n">BLOCKGEN</span> <span class="n">data</span> <span class="n">BY</span> <span class="n">INDEX</span> <span class="s">&quot;/path/to/output&quot;</span> <span class="n">PARTITIONED</span> <span class="n">ON</span> <span class="n">memberId</span> <span class="n">SORTED</span> <span class="n">ON</span> <span class="n">some_column</span><span class="o">;</span>
-        <span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;/path/to/other/output&quot;</span> <span class="n">USING</span> <span class="n">CubertStore</span><span class="o">();</span>
+        <span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;/path/to/other/output&quot;</span> <span class="n">USING</span> <span class="n">RUBIX</span><span class="o">();</span>
 <span class="n">END</span>
 </pre></div>
 </div>
@@ -208,10 +208,10 @@
 <div class="highlight-java"><div class="highlight"><pre><span class="n">JOB</span> <span class="s">&quot;resorting blocks&quot;</span>
         <span class="n">REDUCERS</span> <span class="mi">10</span><span class="o">;</span>
         <span class="n">MAP</span> <span class="o">{</span>
-                <span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;/path/to/output&quot;</span> <span class="n">USING</span> <span class="n">CubertStore</span><span class="o">();</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;/path/to/output&quot;</span> <span class="n">USING</span> <span class="n">RUBIX</span><span class="o">();</span>
         <span class="o">}</span>
         <span class="n">BLOCKGEN</span> <span class="n">data</span> <span class="n">BY</span> <span class="n">INDEX</span> <span class="s">&quot;/path/to/output&quot;</span> <span class="n">PARTITIONED</span> <span class="n">ON</span> <span class="n">memberId</span> <span class="n">SORTED</span> <span class="n">ON</span> <span class="n">pagekey</span><span class="o">;</span>
-        <span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;/path/to/resorted-output&quot;</span> <span class="n">USING</span> <span class="n">CubertStore</span><span class="o">();</span>
+        <span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;/path/to/resorted-output&quot;</span> <span class="n">USING</span> <span class="n">RUBIX</span><span class="o">();</span>
 <span class="n">END</span>
 </pre></div>
 </div>

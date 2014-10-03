@@ -31,7 +31,7 @@ The path specification is either:
 * a path with one or more *\** (e.g. "/path/to/dir/\*")
 * multiple comma-separate paths of any of the above type (e.g. "path1", ("path2/daily", 20140101, 20140102), "path3/#LATEST" )
 
-Cubert supports three file formats: Apache AVRO, TEXT, and CubertStore. These formats can be optionally configured using the key-value arguments. The supports properties are:
+Cubert supports three file formats: Apache AVRO, TEXT, and RUBIX. These formats can be optionally configured using the key-value arguments. The supports properties are:
 
 
 * "unsplittable": "true" or "false" (default: "false"). If true, do not split a file (create one mapper per file). Supported by AVRO format.
@@ -54,11 +54,11 @@ Here are code samples to illustrate the various usages of this operator:
 	// loading TEXT data with a specified separator. tab is the default separator.
 	data = LOAD "$inputdir" USING TEXT("separator":"\u001A", "schema": "LONG member_sk, LONG count");
 
-	// loading CubertStore data:
-	data = LOAD "$inputdir" USING CubertStore;
+	// loading RUBIX data:
+	data = LOAD "$inputdir" USING RUBIX;
 
 
-The AVRO and CubertStore formats will automatically infer the schema of the input data. However, for the TEXT input format, we need to specify the schema of the data (using the "schema" parameter).
+The AVRO and RUBIX formats will automatically infer the schema of the input data. However, for the TEXT input format, we need to specify the schema of the data (using the "schema" parameter).
 
 
 STORE
@@ -69,7 +69,7 @@ STORE operator is used to store data into the specified folder in the specified 
 The optional argument for the STORE operators are:
 
 * "overwrite": "true" or "false" (default: "false"). If true, silently delete existing folder. Supported by all formats.
-* "compact": "true" or "false" (default: "false"). If true, write data in compact variable byte encoding. Supported by CubertStore format.
+* "compact": "true" or "false" (default: "false"). If true, write data in compact variable byte encoding. Supported by RUBIX format.
 * "separator": <string> (default: ","). Field separator string in a text record. Supported by TEXT format.
 
 Here are a few examples to illustrate.
@@ -79,8 +79,8 @@ Here are a few examples to illustrate.
 	// store data in a directory in AVRO format::
 	STORE data INTO "$outputdir" USING AVRO;
 
-	// storing in CubertStore format::
-	STORE data INTO "$outputdir" USING CubertStore("overwrite": "true");
+	// storing in RUBIX format::
+	STORE data INTO "$outputdir" USING RUBIX("overwrite": "true");
 
 	// storing in TEXT format::
 	STORE data INTO "$outputdir" USING TEXT("separator":"\u001A");

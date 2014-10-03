@@ -16,7 +16,7 @@ Understanding Cubert Concepts
 One of the distinguishing feature of Cubert, compared to related data flow and relational paradigms (such as Pig, Hive), is that rather than tuple-oriented processing, Cubert defines a notion of Block and applies operators to blocks. There are two kinds of blocks: Partitioned Blocks Co-Partitioned Blocks, which we will study in the first two sections.
 
 
-These blocks are stored in a specific file format called CubertStore. The following section describes the command line utility to inspect these files.
+These blocks are stored in a specific file format called RUBIX. The following section describes the command line utility to inspect these files.
 
 The next section describe CUBE operator -- a general purpose operator for computing additive and non-additive aggregates over an OLAP CUBE or grouping sets.
 

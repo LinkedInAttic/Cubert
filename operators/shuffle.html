@@ -203,7 +203,7 @@
 </div>
 <p>This operator can also compute count distinct by specifying the measure as the partitioning key.</p>
 <div class="highlight-java"><div class="highlight"><pre><span class="n">MAP</span> <span class="o">{</span>
-   <span class="n">cube</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;$inputFactTable&quot;</span> <span class="n">USING</span> <span class="n">CubertStore</span><span class="o">;</span>
+   <span class="n">cube</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;$inputFactTable&quot;</span> <span class="n">USING</span> <span class="n">RUBIX</span><span class="o">;</span>
 <span class="o">}</span>
 <span class="c1">// computes full OLAP cube</span>
 <span class="n">CUBE</span> <span class="n">cube</span> <span class="n">BY</span> <span class="n">PageKey</span><span class="o">,</span> <span class="n">ProductPageKeyGroup</span><span class="o">,</span> <span class="n">Locale</span><span class="o">,</span> <span class="n">Platform</span> <span class="n">PARTITIONED</span> <span class="n">ON</span> <span class="n">ContextId</span>

@@ -42,9 +42,9 @@ As a user of Cubert, we are responsible for the following four actions for BLOCK
 	* By PARTITION KEYS: each block should have specified number of partition keys. This cost function will be same as BY ROW, if the partition keys is the primary key as well (that is, only only row per partition key).
 	* By SIZE: each block should have specified number of bytes.
 
-#. Storing the BLOCKGEN data in CubertStore file format: the dataset organized into blocks MUST be stored in CubertStore file format.
+#. Storing the BLOCKGEN data in RUBIX file format: the dataset organized into blocks MUST be stored in RUBIX file format.
 	
-	CubertStore supports a custom data layout format that embeds indices and other metadata related to the BLOCKGEN process.
+	RUBIX supports a custom data layout format that embeds indices and other metadata related to the BLOCKGEN process.
 
 	
 Creating Partitioned Blocks
@@ -63,8 +63,8 @@ The blocks are created using the BLOCKGEN shuffle command, discussed in detail :
 		// (c) have a size of 1000 rows
 		BLOCKGEN data BY ROW 1000 PARTITIONED ON memberId SORTED ON timestamp;
 
-		// ALWAYS store BLOCKGEN data using CubertStore file format!
-		STORE data INTO "/path/to/output" USING CubertStore();
+		// ALWAYS store BLOCKGEN data using RUBIX file format!
+		STORE data INTO "/path/to/output" USING RUBIX();
 	END
 
-Note that there will be 10 data files (part-r-00000.rbx through part-r-00009.rbx), since we assigned as many number of reducers. That is to say, the CubertStore file can store more than one block in a single file. So don't worry about the file count quota when creating 1000's of blocks!
+Note that there will be 10 data files (part-r-00000.rbx through part-r-00009.rbx), since we assigned as many number of reducers. That is to say, the RUBIX file can store more than one block in a single file. So don't worry about the file count quota when creating 1000's of blocks!

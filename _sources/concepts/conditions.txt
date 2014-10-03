@@ -67,13 +67,13 @@ This time we will add a job to partition the job (using BLOCKGEN), but to make t
 			data = LOAD "$input" USING AVRO;
 		}
 		BLOCKGEN data BY ROW 1000 PARTITIONED ON dim0; // <== PROBLEM. We should have been partitioning on memberId
-		STORE data INTO "tmp" USING CubertStore;
+		STORE data INTO "tmp" USING RUBIX;
 	END
 
-	JOB "CUBE operator on CubertStore data"
+	JOB "CUBE operator on RUBIX data"
 		REDUCERS 1;
 		MAP {
-			data = LOAD "tmp" USING CubertStore; 
+			data = LOAD "tmp" USING RUBIX; 
 		}
 		// PRECONDITION ERROR. The data is not partitioned on memberId (it is partitioned on dim0)
 		CUBE data BY dim0, dim1 PARTITIONED ON memberId AGGREGATES COUNT_DISTINCT(memberId) AS count;
@@ -85,7 +85,7 @@ And indeed the precondition error will be reported by cubert:
 .. code-block:: bash
 
 	> $CUBERT_HOME/bin/cubert script2.cmr
-	Analyzing job [CUBE operator on CubertStore data]...
+	Analyzing job [CUBE operator on RUBIX data]...
 	ERROR: PreconditionException [INVALID_PARTITION_KEYS] Found=[dim0]. Expected=[memberId]
 	At:	[MAP] CUBE data BY dim0, dim1 PARTITIONED ON memberId AGGREGATES COUNT_DISTINCT(memberId) AS count;
 
@@ -104,7 +104,7 @@ This time we will partition the data correctly, but sort it on different columns
 			data = LOAD "$input" USING AVRO;
 		}
 		BLOCKGEN data BY ROW 1000 PARTITIONED ON memberId SORTED ON dim0; // <== PROBLEM. We should have been sorting on memberId
-		STORE data INTO "tmp" USING CubertStore;
+		STORE data INTO "tmp" USING RUBIX;
 	END
 
 	// the second job same as before

@@ -184,13 +184,13 @@ Cannot compile cubert script. Exiting.
                 <span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;$input&quot;</span> <span class="n">USING</span> <span class="n">AVRO</span><span class="o">;</span>
         <span class="o">}</span>
         <span class="n">BLOCKGEN</span> <span class="n">data</span> <span class="n">BY</span> <span class="n">ROW</span> <span class="mi">1000</span> <span class="n">PARTITIONED</span> <span class="n">ON</span> <span class="n">dim0</span><span class="o">;</span> <span class="c1">// &lt;== PROBLEM. We should have been partitioning on memberId</span>
-        <span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;tmp&quot;</span> <span class="n">USING</span> <span class="n">CubertStore</span><span class="o">;</span>
+        <span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;tmp&quot;</span> <span class="n">USING</span> <span class="n">RUBIX</span><span class="o">;</span>
 <span class="n">END</span>
 
-<span class="n">JOB</span> <span class="s">&quot;CUBE operator on CubertStore data&quot;</span>
+<span class="n">JOB</span> <span class="s">&quot;CUBE operator on RUBIX data&quot;</span>
         <span class="n">REDUCERS</span> <span class="mi">1</span><span class="o">;</span>
         <span class="n">MAP</span> <span class="o">{</span>
-                <span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;tmp&quot;</span> <span class="n">USING</span> <span class="n">CubertStore</span><span class="o">;</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;tmp&quot;</span> <span class="n">USING</span> <span class="n">RUBIX</span><span class="o">;</span>
         <span class="o">}</span>
         <span class="c1">// PRECONDITION ERROR. The data is not partitioned on memberId (it is partitioned on dim0)</span>
         <span class="n">CUBE</span> <span class="n">data</span> <span class="n">BY</span> <span class="n">dim0</span><span class="o">,</span> <span class="n">dim1</span> <span class="n">PARTITIONED</span> <span class="n">ON</span> <span class="n">memberId</span> <span class="n">AGGREGATES</span> <span class="n">COUNT_DISTINCT</span><span class="o">(</span><span class="n">memberId</span><span class="o">)</span> <span class="n">AS</span> <span class="n">count</span><span class="o">;</span>
@@ -200,7 +200,7 @@ Cannot compile cubert script. Exiting.
 </div>
 <p>And indeed the precondition error will be reported by cubert:</p>
 <div class="highlight-bash"><div class="highlight"><pre>&gt; <span class="nv">$CUBERT_HOME</span>/bin/cubert script2.cmr
-Analyzing job <span class="o">[</span>CUBE operator on CubertStore data<span class="o">]</span>...
+Analyzing job <span class="o">[</span>CUBE operator on RUBIX data<span class="o">]</span>...
 ERROR: PreconditionException <span class="o">[</span>INVALID_PARTITION_KEYS<span class="o">]</span> <span class="nv">Found</span><span class="o">=[</span>dim0<span class="o">]</span>. <span class="nv">Expected</span><span class="o">=[</span>memberId<span class="o">]</span>
 At:     <span class="o">[</span>MAP<span class="o">]</span> CUBE data BY dim0, dim1 PARTITIONED ON memberId AGGREGATES COUNT_DISTINCT<span class="o">(</span>memberId<span class="o">)</span> AS count;
 
@@ -218,7 +218,7 @@ Cannot compile cubert script. Exiting.
                 <span class="n">data</span> <span class="o">=</span> <span class="n">LOAD</span> <span class="s">&quot;$input&quot;</span> <span class="n">USING</span> <span class="n">AVRO</span><span class="o">;</span>
         <span class="o">}</span>
         <span class="n">BLOCKGEN</span> <span class="n">data</span> <span class="n">BY</span> <span class="n">ROW</span> <span class="mi">1000</span> <span class="n">PARTITIONED</span> <span class="n">ON</span> <span class="n">memberId</span> <span class="n">SORTED</span> <span class="n">ON</span> <span class="n">dim0</span><span class="o">;</span> <span class="c1">// &lt;== PROBLEM. We should have been sorting on memberId</span>
-        <span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;tmp&quot;</span> <span class="n">USING</span> <span class="n">CubertStore</span><span class="o">;</span>
+        <span class="n">STORE</span> <span class="n">data</span> <span class="n">INTO</span> <span class="s">&quot;tmp&quot;</span> <span class="n">USING</span> <span class="n">RUBIX</span><span class="o">;</span>
 <span class="n">END</span>
 
 <span class="c1">// the second job same as before</span>
