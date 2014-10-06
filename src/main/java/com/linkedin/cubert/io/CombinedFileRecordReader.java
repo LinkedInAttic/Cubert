@@ -55,6 +55,7 @@ public class CombinedFileRecordReader<K, V> extends RecordReader<K, V>
         long totalLength = 0;
         for (long length : lengths)
             totalLength += length;
+        fractionLength = new float[lengths.length];
         for (int i = 0; i < lengths.length; i++)
             fractionLength[i] = ((float) lengths[i]) / totalLength;
     }
