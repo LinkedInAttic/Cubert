@@ -51,9 +51,9 @@ import com.linkedin.cubert.utils.JsonUtils;
 import com.linkedin.cubert.utils.Pair;
 
 /**
- *
+ * 
  * @author Maneesh Varshney
- *
+ * 
  */
 public class CubeOperator implements TupleOperator
 {
@@ -159,7 +159,7 @@ public class CubeOperator implements TupleOperator
      * Process input tuples for cubing without inner dimensions. Note that
      * DupleCubeAggregators cannot be used here (any attempt to use such aggregators would
      * have be caught at the compile time).
-     *
+     * 
      * @return boolean flag to indicate if there is more input to be processed
      * @throws IOException
      * @throws InterruptedException
@@ -200,7 +200,7 @@ public class CubeOperator implements TupleOperator
 
     /**
      * Process input tuples for cubing WITH inner dimensions.
-     *
+     * 
      * @return boolean flag to indicate if there is more input to be processed
      * @return
      * @throws IOException
@@ -428,10 +428,15 @@ public class CubeOperator implements TupleOperator
     private static BlockSchema createOutputSchema(BlockSchema inputSchema, JsonNode json) throws PreconditionException
     {
         List<CubeAggInfo> additiveAggs = new ArrayList<CubeAggInfo>();
-        List<DupleCubeAggInfo> partitionedAdditiveAggs = new ArrayList<DupleCubeAggInfo>();
+        List<DupleCubeAggInfo> partitionedAdditiveAggs =
+                new ArrayList<DupleCubeAggInfo>();
         final String[] innerDimensions = JsonUtils.asArray(json, "innerDimensions");
 
-        createAggregators(json, inputSchema, innerDimensions != null, additiveAggs, partitionedAdditiveAggs);
+        createAggregators(json,
+                          inputSchema,
+                          innerDimensions != null,
+                          additiveAggs,
+                          partitionedAdditiveAggs);
 
         Map<JsonNode, BlockSchema> aggMap = new HashMap<JsonNode, BlockSchema>();
         for (CubeAggInfo info : additiveAggs)
@@ -446,7 +451,8 @@ public class CubeOperator implements TupleOperator
             aggMap.put(aggNode, info.getFirst().outputSchema(inputSchema, aggNode));
         }
 
-        BlockSchema outputSchema = inputSchema.getSubset(JsonUtils.asArray(JsonUtils.get(json, "dimensions")));
+        BlockSchema outputSchema =
+                inputSchema.getSubset(JsonUtils.asArray(JsonUtils.get(json, "dimensions")));
         for (JsonNode aggregateJson : json.get("aggregates"))
             outputSchema = outputSchema.append(aggMap.get(aggregateJson));
 
