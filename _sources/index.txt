@@ -14,6 +14,14 @@ Welcome to Cubert!
 
 **Cubert is a fast and efficient batch computation engine for complex analysis and reporting of massive datasets on Hadoop**.
 
+.. sidebar:: Quick Links
+
+	`Cubert Code at Github <https://github.com/linkedin/Cubert>`_
+	
+	Cubert Users Google Group (`cubert-users <https://groups.google.com/forum/#!forum/cubert-users>`_)
+	
+	Email: cubert-users@googlegroups.com
+
 Where can I use Cubert?
 -----------------------------
 

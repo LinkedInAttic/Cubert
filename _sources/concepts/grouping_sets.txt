@@ -64,6 +64,87 @@ By default, the CUBE operator computes all possible aggregation levels (with *D*
 				GROUPING SETS (product, store), (product, date), (product);
 
 
+Rollups
+~~~~~~~~~~~~~~~~
+Sometimes business logic demands aggregation over a hierarchy of groups. For instance, given a dataset [#f1]_ : { product, category, store, city, state, dollar_sales }, one would need to compute multiple groups like:
+
+=== ==================================== =================================
+Id         Query                                  SQL statement
+=== ==================================== =================================   
+ 1    Total sales for ALL stores within    SELECT SUM(dollar_sales)  ..
+      state                                GROUP BY state
+ 2    Total sales for ALL stores within    SELECT SUM(dollar_sales)  ..
+      city [#f2]_                          GROUP BY state, city
+ 3    Total sales for each category        SELECT SUM(dollar_sales)  ..
+      for ALL stores within a state        GROUP BY state, category
+ 4    Total sales for each category        SELECT SUM(dollar_sales)  ..
+      ACROSS ALL states                    GROUP BY category
+ 5    Total sales for each category,       SELECT SUM(dollar_sales)  ..
+      for each store                       GROUP BY store, category
+=== ==================================== =================================
+
+As described above these aggregates can be computed using multiple grouping sets like so:
+
+.. code-block:: java
+
+        CUBE input BY state, city, store, category AGGREGATES SUM(dollar_sales) AS sum:DOUBLE
+                   GROUPING SETS (state), (state, city), (state, category), (category), (store, category);
+
+However enumerating all these grouping sets can be tedious and error-prone. A short-hand method for such datasets would entail usage of rollups like so:
+
+.. code-block:: java
+
+        CUBE input BY state, city, store, category AGGREGATES SUM(dollar_sales) AS sum:DOUBLE
+                   ROLLUPS (state, city, store), (category);
+
+Cubert's physical parser will internally compute all nested grouping sets from rollup definition. For instance the rollup query will expand to the following grouping sets.
+
+================================== ===========================================
+  ()                                 --total sales--
+  (state)                            query 1
+  (state, city)                      query 2
+  (state, city, store)               --sales per store--
+  (category)                         query 4
+  (state, category)                  query 3
+  (state, city, category)            --sales per category within each city--
+  (state, city, store, category)     query 5
+================================== ===========================================
+
+
+Combo level sets
+~~~~~~~~~~~~~~~~~~
+For a dataset with a large number of dimensions *D*, computing a full cube of *2^D* such aggregations can generate a lot of data. For real-time slicing and dicing it maybe essential to compute cubes over only *N* dimensions at a time, such that *N* < *D*. As an alternative to manually enumerating all combinations of upto *N* dimensions from a possible set of *D*, the following will achieve the same result
+
+.. code-block:: java
+
+         CUBE input BY dim1, dim2, dim3, dim4, ...., dimD AGGREGATES ...
+                    GROUPING COMBOS N;
+
+For example in the dataset : { product, category, store, city, state }, **GROUPING COMBOS 2** will produce all grouping sets combinations of zero dimensions (complete rollup), all single dimension sets, and grouping sets with 2 dimensions.
+
+================== =======================
+  dimensions used   grouping set
+================== =======================
+               0    ()
+------------------ -----------------------
+               1    (product)
+                    (category)
+                    (store)
+                    (city)
+                    (state)
+------------------ -----------------------
+               2    (product, category)
+                    (product, store)
+                    (product, city)
+                    (product, state)
+                    (category, store)
+                    (category, city)
+                    (category, state)
+                    (store, city)
+                    (store, state)
+                    (city, state)
+================== =======================
+
 
 Additive and Partitioned-Additive Aggregations
 ------------------------------------------------
@@ -130,3 +211,7 @@ And, of course, the last query (GROUP BY ALL) will have all columns as null.
 .. note:: nulls in Input
 
 	Since *null* is reserved to indicate that the aggregate is across all values of the column, we **cannot have nulls in input data**. We should use the CASE function to replace the null values in input dataset with some placeholder value (e.g. "N/A", "Unknown", -9, etc).
+
+.. rubric:: Footnotes
+.. [#f1]  dataset of this nature would usually be a derived dataset as a result of a multiple joins
+.. [#f2]  two or more cities in different state/county having the same name

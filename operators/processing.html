@@ -198,6 +198,18 @@
 </div>
 <p>PRECONDITIONS: Input relation must have a partition key ordering that matches (or is a prefix of) GROUP BY keys and its sort key ordering must match (or be a superset of) concatenation of GROUP BY and ORDER BY keys.</p>
 </div>
+<div class="section" id="rank">
+<h2>RANK<a class="headerlink" href="#rank" title="Permalink to this headline">¶</a></h2>
+<p>For every group, as determined by GROUP BY clause, this operator will produce a rank for each row in input data based on columns specified in ORDER BY clause. If GROUP BY and ORDER BY clauses are not specified, tuples will be ranked as per ordered in the input data. Rank is expressed as a new column, specified in AS clause.</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="c1">// rank members per country, ordered by their join data</span>
+<span class="n">chronology</span> <span class="o">=</span> <span class="n">RANK</span> <span class="n">member_data</span> <span class="n">AS</span> <span class="n">join_order</span> <span class="n">GROUP</span> <span class="n">BY</span> <span class="n">country_code</span> <span class="n">ORDER</span> <span class="n">BY</span> <span class="n">member_join_date</span><span class="o">;</span>
+
+<span class="c1">// assign a rank to each tuple</span>
+<span class="n">ranked</span> <span class="o">=</span> <span class="n">RANK</span> <span class="n">data</span> <span class="n">AS</span> <span class="n">rank</span><span class="o">;</span>
+</pre></div>
+</div>
+<p>PRECONDITIONS: GROUP BY and ORDER BY are optional. If not specified, no preconditions. If specified, input relation must have a partition key ordering that matches (or is a prefix of) GROUP BY keys and its sort key ordering must match (or be a superset of) concatenation of GROUP BY and ORDER BY keys.</p>
+</div>
 <div class="section" id="distinct">
 <h2>DISTINCT<a class="headerlink" href="#distinct" title="Permalink to this headline">¶</a></h2>
 <p>DISTINCT operator is used to produce only the distinct tuples in the input as output. Distinct is done based on all the columns in the input schema. Typically this operator is used right after shuffle.</p>

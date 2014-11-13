@@ -226,6 +226,142 @@ GROUP BY ALL</td>
 </pre></div>
 </div>
 </div>
+<div class="section" id="rollups">
+<h3>Rollups<a class="headerlink" href="#rollups" title="Permalink to this headline">¶</a></h3>
+<p>Sometimes business logic demands aggregation over a hierarchy of groups. For instance, given a dataset <a class="footnote-reference" href="#f1" id="id2">[1]</a> : { product, category, store, city, state, dollar_sales }, one would need to compute multiple groups like:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="4%" />
+<col width="50%" />
+<col width="46%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Id</th>
+<th class="head">Query</th>
+<th class="head">SQL statement</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>1</td>
+<td>Total sales for ALL stores within
+state</td>
+<td>SELECT SUM(dollar_sales)  ..
+GROUP BY state</td>
+</tr>
+<tr class="row-odd"><td>2</td>
+<td>Total sales for ALL stores within
+city <a class="footnote-reference" href="#f2" id="id3">[2]</a></td>
+<td>SELECT SUM(dollar_sales)  ..
+GROUP BY state, city</td>
+</tr>
+<tr class="row-even"><td>3</td>
+<td>Total sales for each category
+for ALL stores within a state</td>
+<td>SELECT SUM(dollar_sales)  ..
+GROUP BY state, category</td>
+</tr>
+<tr class="row-odd"><td>4</td>
+<td>Total sales for each category
+ACROSS ALL states</td>
+<td>SELECT SUM(dollar_sales)  ..
+GROUP BY category</td>
+</tr>
+<tr class="row-even"><td>5</td>
+<td>Total sales for each category,
+for each store</td>
+<td>SELECT SUM(dollar_sales)  ..
+GROUP BY store, category</td>
+</tr>
+</tbody>
+</table>
+<p>As described above these aggregates can be computed using multiple grouping sets like so:</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="n">CUBE</span> <span class="n">input</span> <span class="n">BY</span> <span class="n">state</span><span class="o">,</span> <span class="n">city</span><span class="o">,</span> <span class="n">store</span><span class="o">,</span> <span class="n">category</span> <span class="n">AGGREGATES</span> <span class="n">SUM</span><span class="o">(</span><span class="n">dollar_sales</span><span class="o">)</span> <span class="n">AS</span> <span class="nl">sum:</span><span class="n">DOUBLE</span>
+           <span class="n">GROUPING</span> <span class="nf">SETS</span> <span class="o">(</span><span class="n">state</span><span class="o">),</span> <span class="o">(</span><span class="n">state</span><span class="o">,</span> <span class="n">city</span><span class="o">),</span> <span class="o">(</span><span class="n">state</span><span class="o">,</span> <span class="n">category</span><span class="o">),</span> <span class="o">(</span><span class="n">category</span><span class="o">),</span> <span class="o">(</span><span class="n">store</span><span class="o">,</span> <span class="n">category</span><span class="o">);</span>
+</pre></div>
+</div>
+<p>However enumerating all these grouping sets can be tedious and error-prone. A short-hand method for such datasets would entail usage of rollups like so:</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="n">CUBE</span> <span class="n">input</span> <span class="n">BY</span> <span class="n">state</span><span class="o">,</span> <span class="n">city</span><span class="o">,</span> <span class="n">store</span><span class="o">,</span> <span class="n">category</span> <span class="n">AGGREGATES</span> <span class="n">SUM</span><span class="o">(</span><span class="n">dollar_sales</span><span class="o">)</span> <span class="n">AS</span> <span class="nl">sum:</span><span class="n">DOUBLE</span>
+           <span class="n">ROLLUPS</span> <span class="o">(</span><span class="n">state</span><span class="o">,</span> <span class="n">city</span><span class="o">,</span> <span class="n">store</span><span class="o">),</span> <span class="o">(</span><span class="n">category</span><span class="o">);</span>
+</pre></div>
+</div>
+<p>Cubert&#8217;s physical parser will internally compute all nested grouping sets from rollup definition. For instance the rollup query will expand to the following grouping sets.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="44%" />
+<col width="56%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>()</td>
+<td>&#8211;total sales&#8211;</td>
+</tr>
+<tr class="row-even"><td>(state)</td>
+<td>query 1</td>
+</tr>
+<tr class="row-odd"><td>(state, city)</td>
+<td>query 2</td>
+</tr>
+<tr class="row-even"><td>(state, city, store)</td>
+<td>&#8211;sales per store&#8211;</td>
+</tr>
+<tr class="row-odd"><td>(category)</td>
+<td>query 4</td>
+</tr>
+<tr class="row-even"><td>(state, category)</td>
+<td>query 3</td>
+</tr>
+<tr class="row-odd"><td>(state, city, category)</td>
+<td>&#8211;sales per category within each city&#8211;</td>
+</tr>
+<tr class="row-even"><td>(state, city, store, category)</td>
+<td>query 5</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="combo-level-sets">
+<h3>Combo level sets<a class="headerlink" href="#combo-level-sets" title="Permalink to this headline">¶</a></h3>
+<p>For a dataset with a large number of dimensions <em>D</em>, computing a full cube of <em>2^D</em> such aggregations can generate a lot of data. For real-time slicing and dicing it maybe essential to compute cubes over only <em>N</em> dimensions at a time, such that <em>N</em> &lt; <em>D</em>. As an alternative to manually enumerating all combinations of upto <em>N</em> dimensions from a possible set of <em>D</em>, the following will achieve the same result</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="n">CUBE</span> <span class="n">input</span> <span class="n">BY</span> <span class="n">dim1</span><span class="o">,</span> <span class="n">dim2</span><span class="o">,</span> <span class="n">dim3</span><span class="o">,</span> <span class="n">dim4</span><span class="o">,</span> <span class="o">....,</span> <span class="n">dimD</span> <span class="n">AGGREGATES</span> <span class="o">...</span>
+           <span class="n">GROUPING</span> <span class="n">COMBOS</span> <span class="n">N</span><span class="o">;</span>
+</pre></div>
+</div>
+<p>For example in the dataset : { product, category, store, city, state }, <strong>GROUPING COMBOS 2</strong> will produce all grouping sets combinations of zero dimensions (complete rollup), all single dimension sets, and grouping sets with 2 dimensions.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="44%" />
+<col width="56%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">dimensions used</th>
+<th class="head">grouping set</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>0</td>
+<td>()</td>
+</tr>
+<tr class="row-odd"><td>1</td>
+<td>(product)
+(category)
+(store)
+(city)
+(state)</td>
+</tr>
+<tr class="row-even"><td>2</td>
+<td>(product, category)
+(product, store)
+(product, city)
+(product, state)
+(category, store)
+(category, city)
+(category, state)
+(store, city)
+(store, state)
+(city, state)</td>
+</tr>
+</tbody>
+</table>
+</div>
 </div>
 <div class="section" id="additive-and-partitioned-additive-aggregations">
 <h2>Additive and Partitioned-Additive Aggregations<a class="headerlink" href="#additive-and-partitioned-additive-aggregations" title="Permalink to this headline">¶</a></h2>
@@ -330,6 +466,19 @@ GROUP BY ALL</td>
 <p>nulls in Input</p>
 <p class="last">Since <em>null</em> is reserved to indicate that the aggregate is across all values of the column, we <strong>cannot have nulls in input data</strong>. We should use the CASE function to replace the null values in input dataset with some placeholder value (e.g. &#8220;N/A&#8221;, &#8220;Unknown&#8221;, -9, etc).</p>
 </div>
+<p class="rubric">Footnotes</p>
+<table class="docutils footnote" frame="void" id="f1" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id2">[1]</a></td><td>dataset of this nature would usually be a derived dataset as a result of a multiple joins</td></tr>
+</tbody>
+</table>
+<table class="docutils footnote" frame="void" id="f2" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id3">[2]</a></td><td>two or more cities in different state/county having the same name</td></tr>
+</tbody>
+</table>
 </div>
 </div>
 

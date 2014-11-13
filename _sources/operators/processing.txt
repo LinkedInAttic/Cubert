@@ -86,6 +86,22 @@ This operator will output top N# of records from input data, for every grouping 
 PRECONDITIONS: Input relation must have a partition key ordering that matches (or is a prefix of) GROUP BY keys and its sort key ordering must match (or be a superset of) concatenation of GROUP BY and ORDER BY keys.
 
 
+RANK
+-------------
+
+For every group, as determined by GROUP BY clause, this operator will produce a rank for each row in input data based on columns specified in ORDER BY clause. If GROUP BY and ORDER BY clauses are not specified, tuples will be ranked as per ordered in the input data. Rank is expressed as a new column, specified in AS clause.
+
+.. code-block:: java
+
+        // rank members per country, ordered by their join data
+        chronology = RANK member_data AS join_order GROUP BY country_code ORDER BY member_join_date;
+
+        // assign a rank to each tuple
+        ranked = RANK data AS rank;
+
+PRECONDITIONS: GROUP BY and ORDER BY are optional. If not specified, no preconditions. If specified, input relation must have a partition key ordering that matches (or is a prefix of) GROUP BY keys and its sort key ordering must match (or be a superset of) concatenation of GROUP BY and ORDER BY keys.
+
+
 DISTINCT
 -------------
 
