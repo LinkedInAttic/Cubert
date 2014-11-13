@@ -3,6 +3,8 @@
 
 [Cubert Documentation](http://linkedin.github.io/Cubert) hosted at github.
 
+Cubert Users Google Group: [cubert-users](https://groups.google.com/forum/#!forum/cubert-users).  Email: *cubert-users@googlegroups.com*
+
 Cubert is ideally suited for the following application domains:
 
 1. **Statistical Calculations, Joins and Aggregations**
@@ -105,3 +107,7 @@ Documentation
 Users Guide and Javadoc available at
 
 [http://linkedin.github.io/Cubert](http://linkedin.github.io/Cubert)
+
+Cubert Users Google Group: [cubert-users](https://groups.google.com/forum/#!forum/cubert-users)
+
+Email: *cubert-users@googlegroups.com*
