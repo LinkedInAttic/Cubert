@@ -15,7 +15,7 @@
  * the License.
  */
 
-package org.apache.pig.piggybank.storage.avro;
+package com.linkedin.cubert.pig.piggybank.storage.avro;
 
 /**
  *  Simple logging utils of this package

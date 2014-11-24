@@ -24,7 +24,8 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.apache.pig.piggybank.storage.avro.PigAvroInputFormat;
+
+import com.linkedin.cubert.pig.piggybank.storage.avro.PigAvroInputFormat;
 
 public class PigAvroInputFormatAdaptor extends FileInputFormat<NullWritable, Writable>
 {

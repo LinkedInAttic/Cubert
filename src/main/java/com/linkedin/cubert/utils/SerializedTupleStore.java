@@ -1,9 +1,9 @@
 /* (c) 2014 LinkedIn Corp. All rights reserved.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
  * License at  http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed
  * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
  * CONDITIONS OF ANY KIND, either express or implied.
@@ -11,20 +11,8 @@
 
 package com.linkedin.cubert.utils;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.io.serializer.Deserializer;
@@ -37,9 +25,12 @@ import com.linkedin.cubert.block.BlockSchema;
 import com.linkedin.cubert.block.TupleComparator;
 import com.linkedin.cubert.io.CompactDeserializer;
 import com.linkedin.cubert.io.CompactSerializer;
-import com.linkedin.cubert.io.CompactWritablesDeserializer;
 import com.linkedin.cubert.io.DefaultTupleDeserializer;
 import com.linkedin.cubert.io.DefaultTupleSerializer;
+import com.linkedin.cubert.memory.LookUpTable;
+import com.linkedin.cubert.memory.PagedByteArray;
+import com.linkedin.cubert.memory.PagedByteArrayInputStream;
+import com.linkedin.cubert.memory.PagedByteArrayOutputStream;
 import com.linkedin.cubert.operator.PhaseContext;
 import com.linkedin.cubert.plan.physical.CubertStrings;
 
@@ -51,42 +42,54 @@ import com.linkedin.cubert.plan.physical.CubertStrings;
  * store. Note, however, that the map and the sorted iterator internally constructed over
  * the offsets of the tuples in the store and do not deserialize the tuples until a
  * specific tuple is requested.
- * 
+ *
  * @author Krishna Puttaswamy
- * 
+ *
  */
 
 public class SerializedTupleStore implements TupleStore
 {
-    private static int INITIAL_BYTE_ARRAY_SIZE = 1024 * 10;
-    private int[] keyIndices;
-    private ByteArrayOutputStream byteArrayOut;
-    private List<Integer> startOffsetList;
-    private final int numberOfFieldsinTuple;
-    private final boolean createOffsetList;
+    private static final int CHUNK_SIZE = 1 << 21; // 2 MB
+
+    /* Reader class for random access of tuples */
+    private final SerializedTupleStoreReader reader;
+
+    /* Schema of the data */
+    private BlockSchema schema;
+
+    /* Record for number of tuples */
     private int numTuples = 0;
 
+    /* Members used for serialization/deserialization */
     private Serializer<Tuple> serializer;
     private Deserializer<Tuple> writablesDeserializer;
     private Deserializer<Tuple> deserializer;
+
+    /* The data stream */
+    private PagedByteArrayOutputStream pbaos;
+
+    /* Members used when comparator keys are present */
+    private final String[] comparatorKeys;
+    private boolean createOffsetList;
+    private List<Integer> startOffsetList;
+    private int[] keyIndices;
 
     public SerializedTupleStore(BlockSchema schema) throws IOException
     {
         this(schema, null);
     }
 
-    public SerializedTupleStore(BlockSchema schema, String[] comparatorKeys) throws IOException
+    public SerializedTupleStore(BlockSchema schema,String[] comparatorKeys) throws IOException
     {
-        this.numberOfFieldsinTuple = schema.getNumColumns();
+        this.schema = schema;
+        this.comparatorKeys = comparatorKeys;
         this.createOffsetList = (comparatorKeys != null);
-        this.byteArrayOut = new ByteArrayOutputStream(INITIAL_BYTE_ARRAY_SIZE);
+        this.pbaos = new PagedByteArrayOutputStream(CHUNK_SIZE);
 
-        if (PhaseContext.getConf().getBoolean(CubertStrings.USE_COMPACT_SERIALIZATION,
-                                              false)
-                && schema.isFlatSchema())
+        if (PhaseContext.getConf().getBoolean(CubertStrings.USE_COMPACT_SERIALIZATION, false) && schema.isFlatSchema())
         {
             serializer = new CompactSerializer<Tuple>(schema);
-            writablesDeserializer = new CompactWritablesDeserializer<Tuple>(schema);
+            writablesDeserializer = new CompactDeserializer<Tuple>(schema);
             deserializer = new CompactDeserializer<Tuple>(schema);
         }
         else
@@ -96,7 +99,7 @@ public class SerializedTupleStore implements TupleStore
             writablesDeserializer = deserializer;
         }
 
-        serializer.open(byteArrayOut);
+        serializer.open(pbaos);
 
         if (createOffsetList)
         {
@@ -105,11 +108,13 @@ public class SerializedTupleStore implements TupleStore
             for (int i = 0; i < keyIndices.length; i++)
                 keyIndices[i] = schema.getIndex(comparatorKeys[i]);
         }
+
+        reader = new SerializedTupleStoreReader(pbaos.getPagedByteArray(), true);
     }
 
     public void addToStore(Tuple tuple) throws IOException
     {
-        int startOffset = byteArrayOut.size();
+        int startOffset = pbaos.size();
         serializer.serialize(tuple);
 
         numTuples++;
@@ -122,7 +127,8 @@ public class SerializedTupleStore implements TupleStore
 
     public void clear()
     {
-        byteArrayOut = null;
+        pbaos.reset();
+
         if (startOffsetList != null)
             startOffsetList.clear();
 
@@ -134,48 +140,28 @@ public class SerializedTupleStore implements TupleStore
 
     public Map<Tuple, List<Tuple>> getHashTable() throws IOException
     {
-        return new SerializedTupleMap(getBytes(), startOffsetList);
+        return new LookUpTable(this, comparatorKeys);
     }
 
     @Override
     public Iterator<Tuple> iterator()
     {
         if (createOffsetList)
-            return new SerializedTupleStoreOffsetIterator(getBytes(), startOffsetList);
+            return new SerializedTupleStoreOffsetIterator(pbaos.getPagedByteArray(), startOffsetList);
         else
-            return new SerializedTupleStoreIterator(getBytes());
+            return new SerializedTupleStoreIterator(pbaos.getPagedByteArray());
     }
 
-    private byte[] getBytes()
+    public void sort(SortAlgo sa)
     {
-        return byteArrayOut.toByteArray();
-    }
-
-    public void sort()
-    {
-        System.gc();
-
-        final SerializedTupleStoreReader reader =
-                new SerializedTupleStoreReader(getBytes(), true);
-
         long start = System.currentTimeMillis();
         SerializedStoreTupleComparator comp = new SerializedStoreTupleComparator(reader);
-        // Collections.sort(startOffsetList, comp);
-        Integer[] array = startOffsetList.toArray(new Integer[0]);
-
-        Arrays.sort(array, comp);
-
-        ListIterator<Integer> i = startOffsetList.listIterator();
-        for (int j = 0; j < array.length; j++)
-        {
-            i.next();
-            i.set(array[j]);
-        }
-
+        sa.sort(startOffsetList, comp);
         long end = System.currentTimeMillis();
-        print.f("Sorted in %d ms", end - start);
-
-        // System.gc();
+        if (end - start > 10000)
+        {
+            print.f("SerializedTupleStore: Sorted %d tuples in %d ms", getNumTuples(), end - start);
+        }
     }
 
     public int getNumTuples()
@@ -185,14 +171,14 @@ public class SerializedTupleStore implements TupleStore
 
     public int size()
     {
-        return byteArrayOut.size();
+        return pbaos.size();
     }
 
     /***
      * Comparator implementation to compare the StoreKeys.
-     * 
+     *
      * @author Krishna Puttaswamy
-     * 
+     *
      */
     class SerializedStoreTupleComparator implements Comparator<Integer>
     {
@@ -209,12 +195,12 @@ public class SerializedTupleStore implements TupleStore
         public SerializedStoreTupleComparator(SerializedTupleStoreReader reader)
         {
             this.reader = reader;
-            tuples[0] = TupleFactory.getInstance().newTuple(numberOfFieldsinTuple);
-            tuples[1] = TupleFactory.getInstance().newTuple(numberOfFieldsinTuple);
-            tuples[2] = TupleFactory.getInstance().newTuple(numberOfFieldsinTuple);
+            tuples[0] = newTuple();
+            tuples[1] = newTuple();
+            tuples[2] = newTuple();
         }
 
-        private final Tuple getCached(int offset) throws IOException
+        private Tuple getCached(int offset) throws IOException
         {
             if (offsets[0] == offset)
                 return tuples[0];
@@ -264,19 +250,17 @@ public class SerializedTupleStore implements TupleStore
                 Tuple tuple2 = getCached(o2);
 
                 int cmp = 0;
-                for (int i = 0; i < keyIndices.length; i++)
+                for (int keyIndex : keyIndices)
                 {
-                    Comparable<Object> left =
-                            (Comparable<Object>) tuple1.get(keyIndices[i]);
-                    Comparable<Object> right =
-                            (Comparable<Object>) tuple2.get(keyIndices[i]);
+                    Comparable<Object> left = (Comparable<Object>) tuple1.get(keyIndex);
+                    Comparable<Object> right = (Comparable<Object>) tuple2.get(keyIndex);
 
                     if (left == null && right != null)
                         return -1;
                     if (left != null && right == null)
                         return 1;
 
-                    if (left == null && right == null)
+                    if (left == null) /* right == null is always true */
                         cmp = 0;
                     else
                         cmp = left.compareTo(right);
@@ -296,22 +280,24 @@ public class SerializedTupleStore implements TupleStore
 
     class SerializedTupleStoreIterator implements Iterator<Tuple>
     {
-        private final Tuple tuple = TupleFactory.getInstance()
-                                                .newTuple(numberOfFieldsinTuple);
+        private final Tuple tuple = newTuple();
+        private final PagedByteArrayInputStream in;
+
         private int remaining;
 
-        public SerializedTupleStoreIterator(final byte[] dataInBytes)
+        public SerializedTupleStoreIterator(final PagedByteArray pagedByteArray)
         {
             remaining = numTuples;
+            in = new PagedByteArrayInputStream(pagedByteArray);
 
             try
             {
-                deserializer.open(new ByteArrayInputStream(dataInBytes));
+                deserializer.open(in);
             }
             catch (IOException e)
             {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
+                throw new RuntimeException(e);
             }
         }
 
@@ -331,9 +317,8 @@ public class SerializedTupleStore implements TupleStore
             }
             catch (IOException e)
             {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
-                return null;
+                throw new RuntimeException(e);
             }
 
             remaining--;
@@ -344,7 +329,7 @@ public class SerializedTupleStore implements TupleStore
         @Override
         public void remove()
         {
-
+            throw new NotImplementedException();
         }
 
     }
@@ -352,9 +337,9 @@ public class SerializedTupleStore implements TupleStore
     /***
      * Gives an iterator over the offsetList; Note that the tuple that's returned by the
      * next() method is reused.
-     * 
+     *
      * @author Krishna Puttaswamy
-     * 
+     *
      */
     class SerializedTupleStoreOffsetIterator implements Iterator<Tuple>
     {
@@ -363,21 +348,18 @@ public class SerializedTupleStore implements TupleStore
         private final SerializedTupleStoreReader reader;
         private final Tuple tuple;
 
-        public SerializedTupleStoreOffsetIterator(final byte[] dataInBytes,
+        public SerializedTupleStoreOffsetIterator(PagedByteArray dataInBytes,
                                                   final List<Integer> startOffsetList)
         {
             this.reader = new SerializedTupleStoreReader(dataInBytes, false);
             offsetList = startOffsetList;
-            tuple = TupleFactory.getInstance().newTuple(numberOfFieldsinTuple);
+            tuple = newTuple();
         }
 
         @Override
         public boolean hasNext()
         {
-            if (position < offsetList.size())
-                return true;
-            else
-                return false;
+            return position < offsetList.size();
         }
 
         @Override
@@ -403,61 +385,59 @@ public class SerializedTupleStore implements TupleStore
 
     /**
      * A class to read the tuples based on offsets from the serialized byte[].
-     * 
+     *
      * @author Krishna Puttaswamy
-     * 
+     *
      */
     class SerializedTupleStoreReader
     {
-        private final ByteArrayInputStream in;
-        private Deserializer<Tuple> des;
+        private final PagedByteArrayInputStream is;
+        private final Deserializer<Tuple> deserializer;
 
-        public SerializedTupleStoreReader(byte[] dataInBytes,
-                                          boolean useWritablesDeserializer)
+        public SerializedTupleStoreReader(PagedByteArray pagedByteArray, boolean useWritablesDeserializer)
         {
-            in = new ByteArrayInputStream(dataInBytes);
-            try
-            {
-                if (useWritablesDeserializer)
-                    des = writablesDeserializer;
-                else
-                    des = deserializer;
-                des.open(in);
-            }
-            catch (IOException e)
-            {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-        }
-
-        // creates new tuples
-        public Tuple getTupleAtOffset(int offset) throws IOException
-        {
-            in.reset();
-            in.skip(offset);
-            Tuple tuple = TupleFactory.getInstance().newTuple(numberOfFieldsinTuple);
-            des.deserialize(tuple);
-
-            return tuple;
+            is = new PagedByteArrayInputStream(pagedByteArray);
+            deserializer = useWritablesDeserializer ? writablesDeserializer : SerializedTupleStore.this.deserializer;
         }
 
         // reuses the input tuple
-        public Tuple getTupleAtOffset(int offset, Tuple tuple) throws IOException
+        public Tuple getTupleAtOffset(final int offset, Tuple reuse) throws IOException
         {
-            in.reset();
-            in.skip(offset);
-            des.deserialize(tuple);
+            if (reuse == null)
+            {
+                reuse = newTuple();
+            }
+            deserializer.open(is);
+            is.reset();
+            long skipped = is.skip(offset);
+            if (skipped != offset)
+            {
+                throw new IOException("Unable to skip to offset: " + offset);
+            }
+            deserializer.deserialize(reuse);
 
-            return tuple;
+            return reuse;
+        }
+    }
+
+    @Override
+    public Tuple getTuple(int index, Tuple reuse)
+    {
+        try
+        {
+            return reader.getTupleAtOffset(index, reuse);
+        } catch (IOException e)
+        {
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 
     /**
      * Extracts the key part of the Tuple.
-     * 
+     *
      * @author Krishna Puttaswamy
-     * 
+     *
      */
     class SerializedStoreKey
     {
@@ -547,9 +527,9 @@ public class SerializedTupleStore implements TupleStore
     /**
      * Creates a Map of a Tuple to a List of Tuples with the same key. Internally the map
      * is maintained on the offsets to the tuples serialized and stored in a byte[].
-     * 
+     *
      * @author Krishna Puttaswamy
-     * 
+     *
      */
     class SerializedTupleMap implements Map<Tuple, List<Tuple>>
     {
@@ -567,13 +547,13 @@ public class SerializedTupleStore implements TupleStore
         // the same key.
         HashMap<Integer, HashMap<Integer, ArrayList<Integer>>> tupleMap;
 
-        public SerializedTupleMap(byte[] serializedData, List<Integer> offsetList) throws IOException
+        public SerializedTupleMap(PagedByteArray serializedData, List<Integer> offsetList) throws IOException
         {
             tupleMap = new HashMap<Integer, HashMap<Integer, ArrayList<Integer>>>();
             this.offsetList = offsetList;
 
             reader = new SerializedTupleStoreReader(serializedData, false);
-            tuple = TupleFactory.getInstance().newTuple(numberOfFieldsinTuple);
+            tuple = newTuple();
 
             oneKey = new SerializedStoreKey(keyIndices);
             anotherKey = new SerializedStoreKey(keyIndices);
@@ -600,9 +580,8 @@ public class SerializedTupleStore implements TupleStore
         private void createHashTable() throws IOException
         {
             // go over the tuples and build the hashMap on the offsets
-            for (int i = 0; i < offsetList.size(); i++)
+            for (Integer offset : offsetList)
             {
-                int offset = offsetList.get(i);
                 reader.getTupleAtOffset(offset, tuple);
                 Tuple keyTuple = getProjectedKeyTuple(tuple, false);
                 this.putTupleAndOffset(keyTuple, offset);
@@ -643,7 +622,6 @@ public class SerializedTupleStore implements TupleStore
             }
             catch (IOException e)
             {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
 
@@ -692,19 +670,13 @@ public class SerializedTupleStore implements TupleStore
         @Override
         public boolean isEmpty()
         {
-            if (size() == 0)
-                return true;
-            else
-                return false;
+            return size() == 0;
         }
 
         @Override
         public boolean containsKey(Object key)
         {
-            if (getInnerOffsetList((Tuple) key) != null)
-                return true;
-            else
-                return false;
+            return getInnerOffsetList((Tuple) key) != null;
         }
 
         @Override
@@ -728,7 +700,7 @@ public class SerializedTupleStore implements TupleStore
                 {
                     List<Tuple> returnList = new ArrayList<Tuple>();
                     for (Integer offset : innerList)
-                        returnList.add(reader.getTupleAtOffset(offset));
+                        returnList.add(getTuple(offset, null));
                     return returnList;
                 }
             }
@@ -762,15 +734,13 @@ public class SerializedTupleStore implements TupleStore
             }
 
             Set<Tuple> keyTuples = new HashSet<Tuple>();
-            for (int i = 0; i < allOffsets.size(); i++)
+            for (Integer offset : allOffsets)
             {
                 try
                 {
                     // need to make a copy of the tuples for the keySet
-                    keyTuples.add(getProjectedKeyTuple(reader.getTupleAtOffset(allOffsets.get(i)),
-                                                       true));
-                }
-                catch (IOException e)
+                    keyTuples.add(getProjectedKeyTuple(getTuple(offset, null), true));
+                } catch (IOException e)
                 {
                     e.printStackTrace();
                 }
@@ -802,5 +772,38 @@ public class SerializedTupleStore implements TupleStore
         {
             throw new NotImplementedException();
         }
+    }
+
+    @Override
+    public BlockSchema getSchema()
+    {
+        return schema;
+    }
+
+    @Override
+    public int[] getOffsets()
+    {
+        int[] ret = new int[startOffsetList.size()];
+        for (int i=0; i < ret.length; i++)
+        {
+            ret[i] = startOffsetList.get(i);
+        }
+        return ret;
+    }
+
+    public List<Integer> getStartOffsetList()
+    {
+        return startOffsetList;
+    }
+
+    public void dropIndex()
+    {
+        createOffsetList = false;
+        startOffsetList = null;
+    }
+
+    public Tuple newTuple()
+    {
+        return TupleFactory.getInstance().newTuple(schema.getNumColumns());
     }
 }

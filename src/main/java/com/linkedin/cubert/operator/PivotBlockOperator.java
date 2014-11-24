@@ -19,7 +19,6 @@ import org.apache.pig.data.Tuple;
 import org.codehaus.jackson.JsonNode;
 
 import com.linkedin.cubert.block.Block;
-import com.linkedin.cubert.block.BlockProperties;
 import com.linkedin.cubert.block.PivotedBlock;
 import com.linkedin.cubert.block.TupleStoreBlock;
 import com.linkedin.cubert.utils.JsonUtils;
@@ -61,7 +60,6 @@ import com.linkedin.cubert.utils.TupleStore;
 public class PivotBlockOperator implements BlockOperator
 {
     private Block sourceBlock;
-    private BlockProperties props;
     private boolean inMemory = false;
     private boolean firstBlock = true;
     private boolean serialized = false;
@@ -72,7 +70,6 @@ public class PivotBlockOperator implements BlockOperator
             InterruptedException
     {
         Block inputBlock = input.values().iterator().next();
-        this.props = props;
 
         String[] pivotBy = JsonUtils.asArray(json, "pivotBy");
         boolean inMemory = json.get("inMemory").getBooleanValue();
@@ -100,7 +97,7 @@ public class PivotBlockOperator implements BlockOperator
         {
             firstBlock = false;
             if (inMemory)
-                return loadInMemory(sourceBlock, serialized);
+                return loadInMemory(sourceBlock);
             else
                 return sourceBlock;
         }
@@ -113,14 +110,14 @@ public class PivotBlockOperator implements BlockOperator
             return null;
 
         if (inMemory)
-            return loadInMemory(sourceBlock, serialized);
+            return loadInMemory(sourceBlock);
         else
             return sourceBlock;
 
     }
 
     // bulk load the data in memory, and store it in TupleStore.
-    private Block loadInMemory(Block block, boolean serialize) throws IOException,
+    private Block loadInMemory(Block block) throws IOException,
             InterruptedException
     {
         TupleStore store =
@@ -133,7 +130,15 @@ public class PivotBlockOperator implements BlockOperator
             store.addToStore(tuple);
         }
 
-        return new TupleStoreBlock(store, props);
+        return new TupleStoreBlock(store, block.getProperties());
+    }
+
+    @Override
+    public PostCondition getPostCondition(Map<String, PostCondition> preConditions,
+                                          JsonNode json) throws PreconditionException
+    {
+        // TODO Auto-generated method stub
+        return null;
     }
 
 }

@@ -1,9 +1,9 @@
 /* (c) 2014 LinkedIn Corp. All rights reserved.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
  * License at  http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed
  * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
  * CONDITIONS OF ANY KIND, either express or implied.
@@ -25,7 +25,10 @@ import org.codehaus.jackson.JsonNode;
 
 import com.linkedin.cubert.operator.BlockOperator;
 import com.linkedin.cubert.operator.PhaseContext;
+import com.linkedin.cubert.operator.PostCondition;
+import com.linkedin.cubert.operator.PreconditionException;
 import com.linkedin.cubert.utils.CommonUtils;
+import com.linkedin.cubert.utils.DefaultSortAlgo;
 import com.linkedin.cubert.utils.FileCache;
 import com.linkedin.cubert.utils.JsonUtils;
 import com.linkedin.cubert.utils.SerializedTupleStore;
@@ -54,6 +57,7 @@ public class CreateBlockOperator implements BlockOperator
         protected boolean isCostExceeded(long numTuples,
                                          long numPartitionKeys,
                                          long storeSize)
+
         {
             switch (type)
             {
@@ -157,7 +161,7 @@ public class CreateBlockOperator implements BlockOperator
             System.out.println("Store size is " + store.size());
 
             if (sortKeys != null)
-                store.sort();
+                store.sort(new DefaultSortAlgo<Tuple>());
 
             iterator = store.iterator();
         }
@@ -312,7 +316,7 @@ public class CreateBlockOperator implements BlockOperator
             String indexName = JsonUtils.getText(json, "index");
             try
             {
-                index = FileCache.get().getCachedIndex(indexName);
+                index = FileCache.getCachedIndex(indexName);
             }
             catch (ClassNotFoundException e)
             {
@@ -387,7 +391,9 @@ public class CreateBlockOperator implements BlockOperator
             throw new IllegalArgumentException("The specified block for ["
                     + input.keySet().iterator().next() + "] is null");
 
-        blockgenType = BlockgenType.valueOf(JsonUtils.getText(json, "blockgenType"));
+        blockgenType =
+                BlockgenType.valueOf(JsonUtils.getText(json, "blockgenType")
+                                              .toUpperCase());
         if (json.has("blockgenValue"))
         {
             blockgenValue = json.get("blockgenValue").getLongValue();
@@ -428,7 +434,7 @@ public class CreateBlockOperator implements BlockOperator
         try
         {
             String indexName = JsonUtils.getText(json, "index");
-            index = FileCache.get().getCachedIndex(indexName);
+            index = FileCache.getCachedIndex(indexName);
         }
         catch (ClassNotFoundException e)
         {
@@ -548,6 +554,14 @@ public class CreateBlockOperator implements BlockOperator
             break;
         }
 
+        return null;
+    }
+
+    @Override
+    public PostCondition getPostCondition(Map<String, PostCondition> preConditions,
+                                          JsonNode json) throws PreconditionException
+    {
+        // TODO Auto-generated method stub
         return null;
     }
 }

@@ -21,7 +21,6 @@ import org.codehaus.jackson.JsonNode;
 import com.linkedin.cubert.block.Block;
 import com.linkedin.cubert.block.LocalFileBlock;
 import com.linkedin.cubert.utils.FileCache;
-import com.linkedin.cubert.utils.print;
 
 /**
  * A BlockOperator that create block by loading data directly from external files.
@@ -37,11 +36,12 @@ public class LoadBlockFromCacheOperator implements BlockOperator
     public void setInput(Configuration conf, Map<String, Block> input, JsonNode json) throws IOException,
             InterruptedException
     {
-        FileCache fileCache = new FileCache(conf);
+        // FileCache fileCache = new FileCache(conf);
 
         String path = json.get("path").getTextValue();
-        String cachedPath = fileCache.getCachedFile(path);
-        print.f("Loading file from cache. path=%s cachedPath=%s", path, cachedPath);
+        String cachedPath = FileCache.get(path);
+        if (cachedPath == null)
+            throw new IOException("Cannot find file in dist cache: " + path);
 
         block = new LocalFileBlock(new File(cachedPath));
         block.configure(json);
@@ -54,6 +54,14 @@ public class LoadBlockFromCacheOperator implements BlockOperator
         Block retVal = block;
         block = null;
         return retVal;
+    }
+
+    @Override
+    public PostCondition getPostCondition(Map<String, PostCondition> preConditions,
+                                          JsonNode json) throws PreconditionException
+    {
+        // TODO Auto-generated method stub
+        return null;
     }
 
 }

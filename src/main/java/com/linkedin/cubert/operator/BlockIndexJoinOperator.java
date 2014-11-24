@@ -64,7 +64,7 @@ public class BlockIndexJoinOperator implements TupleOperator
         String indexName = JsonUtils.getText(root, "index");
         try
         {
-            index = FileCache.get().getCachedIndex(indexName);
+            index = FileCache.getCachedIndex(indexName);
         }
         catch (ClassNotFoundException e)
         {

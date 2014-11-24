@@ -34,15 +34,15 @@ import com.linkedin.cubert.utils.JsonUtils;
  * <ul>
  * <li>Extracting the dimensions from the input tuple (via the {@link extractDimensionKey}
  * method)</li>
- * 
+ *
  * <li>Enumerating the "ancestors" for the dimension keys (via the {@link ancestors}
  * method)</li>
- * 
+ *
  * <li>Writing back the dimensions into a tuple (via the {@link outputKey} method).</li>
  * </ul>
- * 
+ *
  * @author Maneesh Varshney
- * 
+ *
  */
 public class CubeDimensions
 {
@@ -193,18 +193,16 @@ public class CubeDimensions
 
             for (int i = 0; i < groupingSetsInput.length; i++)
             {
-                String[] fields = groupingSetsInput[i].split(",");
                 int nullBitVector = -1;
-
-                for (int j = 0; j < fields.length; j++)
+                if (! groupingSetsInput[i].equals("")) // else 'ALL' rollups => no null bits
                 {
-                    nullBitVector =
-                            nullBitVector & ~(1 << dimensionPosition.get(fields[j]));
+                    String[] fields = groupingSetsInput[i].split(",");
+                    for (String field : fields)
+                        nullBitVector &= ~(1 << dimensionPosition.get(field));
                 }
                 ancestors[i].getArray()[nullBitVectorIndex] = nullBitVector;
             }
         }
-
     }
 
     private void assignZeroedDimensions(String[] dimensions)

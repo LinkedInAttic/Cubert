@@ -15,7 +15,7 @@
  * the License.
  */
 
-package org.apache.pig.piggybank.storage.avro;
+package com.linkedin.cubert.pig.piggybank.storage.avro;
 
 import java.io.IOException;
 import java.util.List;

@@ -50,7 +50,6 @@ public class DictionaryEncodeOperator implements TupleOperator
     private CodeDictionary[] dictionaries;
     private Block dataBlock;
     private Tuple encodedTuple;
-    private BlockSchema schema;
     private String replaceNull = null;
 
     @Override
@@ -58,13 +57,12 @@ public class DictionaryEncodeOperator implements TupleOperator
             InterruptedException
     {
         // load the dictionaries
-        JsonNode dictionary = json.get("dictionary");
         Map<String, CodeDictionary> dictionaryMap = null;
-        if (dictionary.isTextual())
+        if (json.has("path"))
         {
-            String dictionaryName = json.get("dictionary").getTextValue();
-            FileCache fileCache = FileCache.get();
-            String dictionaryPath = fileCache.getCachedFile(dictionaryName);
+            String dictionaryName = json.get("path").getTextValue();
+            String dictionaryPath = FileCache.get(dictionaryName);
+            dictionaryPath = dictionaryPath + "/part-r-00000.avro";
 
             dictionaryMap =
                     GenerateDictionary.loadDictionary(dictionaryPath, false, null);
@@ -72,6 +70,8 @@ public class DictionaryEncodeOperator implements TupleOperator
         else
         {
             // this is inline dictionary
+
+            JsonNode dictionary = json.get("dictionary");
             Iterator<String> nameIterator = dictionary.getFieldNames();
             dictionaryMap = new HashMap<String, CodeDictionary>();
             while (nameIterator.hasNext())
@@ -163,21 +163,18 @@ public class DictionaryEncodeOperator implements TupleOperator
         PostCondition inputCondition = preConditions.get(inputBlockName);
         BlockSchema inputSchema = inputCondition.getSchema();
 
-        JsonNode dictionary = json.get("dictionary");
-
         Map<String, CodeDictionary> dictionaryMap = new HashMap<String, CodeDictionary>();
 
-        if (dictionary.isTextual())
+        if (json.has("columns"))
         {
-            String dictionaryPath = json.get("dictionary").getTextValue();
-            String[] encodedColumns =
-                    preConditions.get(dictionaryPath).getSchema().getColumnNames();
-            for (String column : encodedColumns)
+            String[] columns = JsonUtils.asArray(json, "columns");
+            for (String column : columns)
                 dictionaryMap.put(column, new CodeDictionary());
-
         }
         else
         {
+            JsonNode dictionary = json.get("dictionary");
+
             // this is inline dictionary
             Iterator<String> nameIterator = dictionary.getFieldNames();
             while (nameIterator.hasNext())

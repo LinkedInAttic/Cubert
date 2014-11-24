@@ -35,11 +35,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.pig.piggybank.storage.avro.AvroSchema2Pig;
 
 import com.linkedin.cubert.block.BlockSchema;
 import com.linkedin.cubert.block.ColumnType;
 import com.linkedin.cubert.block.DataType;
+import com.linkedin.cubert.pig.piggybank.storage.avro.AvroSchema2Pig;
 
 /**
  * Various utility methods related to Avro Schema.

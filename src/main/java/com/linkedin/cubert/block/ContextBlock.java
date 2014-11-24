@@ -1,9 +1,9 @@
 /* (c) 2014 LinkedIn Corp. All rights reserved.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
  * License at  http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed
  * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
  * CONDITIONS OF ANY KIND, either express or implied.
@@ -20,12 +20,13 @@ import org.codehaus.jackson.map.JsonMappingException;
 
 import com.linkedin.cubert.io.StorageFactory;
 import com.linkedin.cubert.utils.JsonUtils;
+import com.linkedin.cubert.utils.ClassCache;
 
 /**
  * A block which is backed by input data from Mapper or Reducer.
- * 
+ *
  * @author Maneesh Varshney
- * 
+ *
  */
 public class ContextBlock implements Block
 {
@@ -68,7 +69,7 @@ public class ContextBlock implements Block
             if (json.has("tupleCreator"))
             {
                 tupleCreator =
-                        (TupleCreator) Class.forName(json.get("tupleCreator")
+                        (TupleCreator) ClassCache.forName(json.get("tupleCreator")
                                                          .getTextValue()).newInstance();
             }
             else

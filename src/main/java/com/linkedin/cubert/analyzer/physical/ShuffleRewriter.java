@@ -1,9 +1,9 @@
 /* (c) 2014 LinkedIn Corp. All rights reserved.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
  * License at  http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed
  * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
  * CONDITIONS OF ANY KIND, either express or implied.
@@ -18,8 +18,12 @@ import static com.linkedin.cubert.utils.JsonUtils.createArrayNode;
 import static com.linkedin.cubert.utils.JsonUtils.createObjectNode;
 import static com.linkedin.cubert.utils.JsonUtils.getText;
 
+import java.io.IOException;
 import java.util.Set;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.JobConf;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
@@ -81,8 +85,130 @@ public class ShuffleRewriter implements PlanRewriter
             return rewriteBlockgen(job);
         else if (type.equals("CUBE"))
             return rewriteCube(job);
+        else if (type.equals("CREATE-DICTIONARY"))
+            return rewriteDictionary(job);
+        else if (type.equals("DISTINCT"))
+            return rewriteDistinct(job);
 
         throw new RuntimeException("Cannot rewrite shuffle type " + type);
+    }
+
+    private JsonNode rewriteDictionary(JsonNode job)
+    {
+        ObjectNode newJob = (ObjectNode) cloneNode(job);
+
+        ObjectNode shuffle = (ObjectNode) newJob.get("shuffle");
+        if (shuffle == null)
+            throw new RuntimeException("Shuffle description missing. Cannot rewrite.");
+
+        newJob.put("reducers", 1);
+
+        // Determine if this is a refresh job or a fresh dictionary creation by looking at
+        // STORE location
+        String storePath = job.get("output").get("path").getTextValue();
+        String dictionaryPath = storePath + "/part-r-00000.avro";
+        boolean refresh = false;
+
+        try
+        {
+            FileSystem fs = FileSystem.get(new JobConf());
+            refresh = fs.exists(new Path(dictionaryPath));
+        }
+        catch (IOException e)
+        {
+            // we will not refresh
+        }
+
+        // Rewrite map
+        JsonNode relationName = shuffle.get("name");
+
+        ObjectNode mapSideOperator =
+                JsonUtils.createObjectNode("operator",
+                                           "USER_DEFINED_TUPLE_OPERATOR",
+                                           "class",
+                                           "com.linkedin.cubert.operator.DictionaryRefreshMapSideOperator",
+                                           "input",
+                                           JsonUtils.createArrayNode(relationName),
+                                           "output",
+                                           relationName,
+                                           "columns",
+                                           shuffle.get("columns"));
+
+        copyLine(shuffle, mapSideOperator, "[MAP] ");
+
+        for (JsonNode map : newJob.path("map"))
+        {
+            if (!map.has("operators") || map.get("operators").isNull())
+                ((ObjectNode) map).put("operators", JsonUtils.createArrayNode());
+            ArrayNode operators = (ArrayNode) map.get("operators");
+            operators.add(mapSideOperator);
+        }
+
+        // Rewrite shuffle
+        shuffle.put("name", relationName);
+        shuffle.put("type", "SHUFFLE");
+        shuffle.put("partitionKeys",
+                    JsonUtils.createArrayNode(CommonUtils.array("colname", "colvalue")));
+        shuffle.put("pivotKeys",
+                    JsonUtils.createArrayNode(CommonUtils.array("colname", "colvalue")));
+        if (shuffle.has("columns"))
+            shuffle.remove("columns");
+        if (shuffle.has("dictionaryPath"))
+            shuffle.remove("dictionaryPath");
+        shuffle.remove("input");
+
+        // Rewrite reduce
+        if (!newJob.has("reduce") || newJob.get("reduce").isNull())
+            newJob.put("reduce", JsonUtils.createArrayNode());
+        ArrayNode reduceJob = (ArrayNode) newJob.get("reduce");
+
+        ObjectNode reduceSideOperator = (ObjectNode) cloneNode(mapSideOperator);
+        reduceSideOperator.put("class",
+                               "com.linkedin.cubert.operator.DictionaryRefreshReduceSideOperator");
+        copyLine(shuffle, reduceSideOperator, "[REDUCE] ");
+        reduceJob.insert(0, reduceSideOperator);
+
+        // Rewrite cached files
+        if (refresh)
+        {
+            String newStorePath = storePath + "/tmp";
+            String newDictionaryPath = newStorePath + "/part-r-00000.avro";
+
+            // put the existing dictionary file in dist cache
+            if (!newJob.has("cachedFiles") || newJob.get("cachedFiles").isNull())
+                newJob.put("cachedFiles", JsonUtils.createArrayNode());
+            ArrayNode cachedFiles = (ArrayNode) newJob.get("cachedFiles");
+            cachedFiles.add(dictionaryPath + "#dictionary");
+
+            // tell the operators to use cached dictionary
+            mapSideOperator.put("dictionary", dictionaryPath + "#dictionary");
+            reduceSideOperator.put("dictionary", dictionaryPath + "#dictionary");
+
+            // the output path is changed to <original path>/tmp
+            ((ObjectNode) newJob.get("output")).put("path", newStorePath);
+
+            // put onCompletion for this job to move the new dictionary to the parent
+            // folder
+            ArrayNode onCompletion = mapper.createArrayNode();
+            // onCompletion.add(JsonUtils.createObjectNode("type",
+            // "rm",
+            // "paths",
+            // JsonUtils.createArrayNode(storePath
+            // + "/dictionary.avro")));
+            onCompletion.add(JsonUtils.createObjectNode("type",
+                                                        "mv",
+                                                        "paths",
+                                                        JsonUtils.createArrayNode(new String[] {
+                                                                newDictionaryPath,
+                                                                dictionaryPath })));
+            onCompletion.add(JsonUtils.createObjectNode("type",
+                                                        "rm",
+                                                        "paths",
+                                                        JsonUtils.createArrayNode(newStorePath)));
+            newJob.put("onCompletion", onCompletion);
+        }
+
+        return newJob;
     }
 
     private JsonNode rewriteBlockgen(JsonNode job)
@@ -351,6 +477,31 @@ public class ShuffleRewriter implements PlanRewriter
             // change the input column name
             onode.put("input", outputColName);
         }
+    }
+
+    private JsonNode rewriteDistinct(JsonNode job)
+    {
+        ObjectNode newJob = (ObjectNode) cloneNode(job);
+        ObjectNode shuffle = (ObjectNode) newJob.get("shuffle");
+        String name = getText(shuffle, "name");
+
+        ObjectNode distinctOp =
+                JsonUtils.createObjectNode("operator",
+                                           "DISTINCT",
+                                           "input",
+                                           name,
+                                           "output",
+                                           name);
+
+        if (!newJob.has("reduce") || newJob.get("reduce").isNull())
+            newJob.put("reduce", mapper.createArrayNode());
+        ArrayNode reduce = (ArrayNode) newJob.get("reduce");
+        reduce.insert(0, distinctOp);
+
+        shuffle.put("type", "SHUFFLE");
+        shuffle.put("distinctShuffle", true);
+
+        return newJob;
     }
 
     private void copyLine(ObjectNode from, ObjectNode to, String prefix)

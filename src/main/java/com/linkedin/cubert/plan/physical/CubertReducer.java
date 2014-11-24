@@ -29,6 +29,7 @@ import com.linkedin.cubert.operator.PhaseContext;
 import com.linkedin.cubert.operator.TeeOperator;
 import com.linkedin.cubert.utils.FileCache;
 import com.linkedin.cubert.utils.JsonUtils;
+import com.linkedin.cubert.utils.MemoryStats;
 import com.linkedin.cubert.utils.print;
 
 /**
@@ -46,7 +47,7 @@ public class CubertReducer extends Reducer<Tuple, Tuple, Object, Object>
         print.f("Reducer init --------------------------------");
         Configuration conf = context.getConfiguration();
 
-        FileCache.create(conf);
+        FileCache.initialize(conf);
         PhaseContext.create(context, conf);
 
         ObjectMapper mapper = new ObjectMapper();
@@ -89,7 +90,7 @@ public class CubertReducer extends Reducer<Tuple, Tuple, Object, Object>
         print.f("Reducer operators completed in %d ms", System.currentTimeMillis()
                 - start);
         print.f("----------------------------------");
-
+        MemoryStats.printGCStats();
     }
 
     void printMemory(String msg)

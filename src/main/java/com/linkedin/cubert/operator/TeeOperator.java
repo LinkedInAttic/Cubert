@@ -45,6 +45,8 @@ public class TeeOperator implements TupleOperator
     {
         for (TeeWriter writer : openedWriters.values())
             writer.close();
+
+        openedWriters.clear();
     }
 
     @Override

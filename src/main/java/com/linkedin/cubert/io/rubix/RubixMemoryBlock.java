@@ -33,6 +33,7 @@ public class RubixMemoryBlock implements Block
     private final BlockProperties props;
     private RubixTupleCreator tupleCreator;
     private ByteBuffer byteBuffer;
+    private final BlockSerializationType serializationType;
 
     private ByteBufferBackedInputStream inputStream;
     private Deserializer<Tuple> deserializer;
@@ -49,6 +50,7 @@ public class RubixMemoryBlock implements Block
                             BlockSerializationType serializationType) throws IOException
     {
         this.props = props;
+        this.serializationType = serializationType;
         this.byteBuffer = byteBuffer;
         this.tupleCreator = new RubixTupleCreator();
 
@@ -105,6 +107,11 @@ public class RubixMemoryBlock implements Block
     public void configure(JsonNode json) throws IOException
     {
         tupleCreator.setup(json);
+    }
+
+    public BlockSerializationType getSerializationType()
+    {
+        return serializationType;
     }
 
     @Override

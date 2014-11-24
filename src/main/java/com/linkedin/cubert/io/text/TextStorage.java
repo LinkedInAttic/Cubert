@@ -56,6 +56,12 @@ public class TextStorage implements Storage
                               BlockSchema schema,
                               Path path)
     {
+        if (params.has("separator"))
+        {
+            conf.set(CubertStrings.TEXT_OUTPUT_SEPARATOR,
+                     JsonUtils.getText(params, "separator"));
+        }
+
         job.setOutputFormatClass(PigTextOutputFormatWrapper.class);
     }
 

@@ -33,4 +33,6 @@ public interface BlockOperator
 
     Block next() throws IOException,
             InterruptedException;
+
+    PostCondition getPostCondition(Map<String, PostCondition> preConditions, JsonNode json) throws PreconditionException;
 }

@@ -1,9 +1,9 @@
 /* (c) 2014 LinkedIn Corp. All rights reserved.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
  * License at  http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed
  * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
  * CONDITIONS OF ANY KIND, either express or implied.
@@ -50,6 +50,7 @@ import com.linkedin.cubert.block.BlockSchema;
 import com.linkedin.cubert.io.BlockSerializationType;
 import com.linkedin.cubert.utils.JsonUtils;
 import com.linkedin.cubert.utils.print;
+import com.linkedin.cubert.utils.ClassCache;
 
 public class RubixFile<K, V>
 {
@@ -237,9 +238,9 @@ public class RubixFile<K, V>
         int numberOfBlocks = metadataJson.get("numberOfBlocks").getIntValue();
 
         // load the key section
-        keyClass = (Class<K>) Class.forName(JsonUtils.getText(metadataJson, "keyClass"));
+        keyClass = (Class<K>) ClassCache.forName(JsonUtils.getText(metadataJson, "keyClass"));
         valueClass =
-                (Class<V>) Class.forName(JsonUtils.getText(metadataJson, "valueClass"));
+                (Class<V>) ClassCache.forName(JsonUtils.getText(metadataJson, "valueClass"));
 
         SerializationFactory serializationFactory = new SerializationFactory(conf);
         Deserializer<K> deserializer = serializationFactory.getDeserializer(keyClass);

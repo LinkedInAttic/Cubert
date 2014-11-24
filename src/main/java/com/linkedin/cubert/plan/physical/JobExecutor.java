@@ -159,6 +159,7 @@ public class JobExecutor
 
         moveTeeFiles();
         postJobHooks();
+        doCompletionTasks();
 
         return retval;
     }
@@ -205,8 +206,11 @@ public class JobExecutor
 
         }
 
-        conf.set("mapreduce.map.output.compress", "true");
-        conf.set("mapreduce.output.fileoutputformat.compress", "true");
+        if (conf.get("mapreduce.map.output.compress") == null)
+            conf.set("mapreduce.map.output.compress", "true");
+
+        if (conf.get("mapreduce.output.fileoutputformat.compress") == null)
+            conf.set("mapreduce.output.fileoutputformat.compress", "true");
     }
 
     private void serializeExecutionConfig() throws IOException
@@ -228,6 +232,12 @@ public class JobExecutor
         if (postHooks != null)
             processJobCommands(postHooks);
 
+    }
+
+    private void doCompletionTasks() throws IOException
+    {
+        if (root.has("onCompletion") && !root.get("onCompletion").isNull())
+            CompletionTasks.doCompletionTasks(root.get("onCompletion"));
     }
 
     private void processJobCommands(ArrayNode commands)
@@ -303,48 +313,9 @@ public class JobExecutor
 
         for (JsonNode cachedFile : root.path("cachedFiles"))
         {
-            Path path = new Path(cachedFile.getTextValue());
-            print.f("CACHING file %s", path);
-
-            String pathInString = path.toString();
-            String fragment = null;
-            if (pathInString.contains("#"))
-            {
-                fragment = pathInString.substring(pathInString.indexOf("#"));
-                pathInString = pathInString.substring(0, pathInString.indexOf("#"));
-            }
-
-            FileStatus status = fs.getFileStatus(new Path(pathInString));
-            if (status.isDir())
-            {
-                FileStatus[] children = fs.globStatus(new Path(path + "/*"));
-                for (FileStatus child : children)
-                {
-                    if (child.isDir())
-                        continue;
-                    String name = child.getPath().getName();
-                    if (name.startsWith("_") || name.startsWith("."))
-                        continue;
-                    if (!fs.exists(child.getPath()))
-                        throw new IOException("File [" + child.getPath() + "] not found.");
-                    DistributedCache.addCacheFile(child.getPath().toUri(), conf);
-                    break;
-                }
-            }
-            else
-            {
-                URI uri = new Path(pathInString).toUri();
-                String uriEncoded = uri.toString();
-                if (fragment != null)
-                {
-                    uriEncoded = uriEncoded + fragment;
-                }
-
-                path = new Path(uri);
-                if (!fs.exists(path))
-                    throw new IOException("File [" + path + "] not found.");
-                DistributedCache.addCacheFile(new URI(uriEncoded), conf);
-            }
+            URI uri = new URI(cachedFile.getTextValue());
+            print.f("CACHING file %s", uri);
+            DistributedCache.addCacheFile(uri, conf);
         }
     }
 
@@ -368,7 +339,8 @@ public class JobExecutor
             Path indexPath = new Path(tmpDir, UUID.randomUUID().toString());
             SerializerUtils.serializeToFile(conf, indexPath, indexToCache);
 
-            DistributedCache.addCacheFile(new URI(indexPath.toString()), conf);
+            DistributedCache.addCacheFile(new URI(indexPath.toString() + "#" + indexName),
+                                          conf);
 
             // tmpFiles.add(indexPath);
 
@@ -414,8 +386,7 @@ public class JobExecutor
 
             if (originalMaxCombinedSplitSize == -1)
             {
-                System.err.println("CONFIG ERROR: property mapreduce.input.fileinputformat.split.maxsize is not set when using combined input format");
-                System.exit(-1);
+                throw new IllegalStateException("CONFIG ERROR: property mapreduce.input.fileinputformat.split.maxsize is not set when using combined input format");
             }
         }
 

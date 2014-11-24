@@ -1,9 +1,9 @@
 /* (c) 2014 LinkedIn Corp. All rights reserved.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
  * License at  http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed
  * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
  * CONDITIONS OF ANY KIND, either express or implied.
@@ -15,38 +15,6 @@ import com.linkedin.cubert.block.CreateBlockOperator;
 
 public class OperatorFactory
 {
-
-    public static BlockOperator getUserDefinedBlockOperator(String classname)
-    {
-        try
-        {
-            Class<?> cls = Class.forName(classname);
-            Object object = cls.newInstance();
-
-            return (BlockOperator) object;
-        }
-        catch (Exception e)
-        {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static TupleOperator getUserDefinedTupleOperator(String classname)
-    {
-        try
-        {
-            Class<?> cls = Class.forName(classname);
-            Object object = cls.newInstance();
-
-            return (TupleOperator) object;
-        }
-        catch (Exception e)
-        {
-            throw new RuntimeException(e);
-        }
-
-    }
-
     public static BlockOperator getBlockOperator(OperatorType type)
     {
         switch (type)
@@ -113,6 +81,8 @@ public class OperatorFactory
             return new GatherOperator();
         case TOP_N:
             return new TopNOperator();
+        case RANK:
+            return new RankOperator();
         case FLATTEN:
             return new FlattenBagOperator();
         case VALIDATE:

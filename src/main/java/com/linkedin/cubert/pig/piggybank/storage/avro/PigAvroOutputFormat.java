@@ -15,7 +15,7 @@
  * the License.
  */
 
-package org.apache.pig.piggybank.storage.avro;
+package com.linkedin.cubert.pig.piggybank.storage.avro;
 
 import static org.apache.avro.file.DataFileConstants.DEFAULT_SYNC_INTERVAL;
 import java.io.IOException;

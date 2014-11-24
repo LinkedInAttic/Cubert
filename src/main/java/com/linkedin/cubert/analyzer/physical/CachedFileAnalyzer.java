@@ -14,6 +14,8 @@ package com.linkedin.cubert.analyzer.physical;
 import static com.linkedin.cubert.utils.JsonUtils.getText;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -46,8 +48,9 @@ public class CachedFileAnalyzer implements PlanRewriter
                             boolean revisit) throws IOException
     {
         FileSystem fs = FileSystem.get(conf);
-        Map<String, String> latestPathMap = new HashMap<String, String>();
+        Map<String, String> symlinkMap = new HashMap<String, String>();
         ObjectMapper mapper = new ObjectMapper();
+        int symlinkCounter = 0;
 
         for (JsonNode job : plan.path("jobs"))
         {
@@ -56,51 +59,78 @@ public class CachedFileAnalyzer implements PlanRewriter
                 ArrayNode cachedFiles = mapper.createArrayNode();
                 for (JsonNode file : job.path("cachedFiles"))
                 {
-                    String path = file.getTextValue();
+                    String filename = file.getTextValue();
+                    URI uri = null;
+                    try
+                    {
+                        uri = new URI(filename);
+                    }
+                    catch (URISyntaxException e)
+                    {
+                        throw new PlanRewriteException(e);
+                    }
+
+                    String path = uri.getPath();
+                    String fragment = uri.getFragment();
+
+                    // check if the fragment was already created earlier
+                    if (fragment == null)
+                        fragment = symlinkMap.get(path);
+
+                    // create a new one
+                    if (fragment == null)
+                        fragment = "cached_" + (symlinkCounter++);
+
+                    symlinkMap.put(path, fragment);
 
                     if (path.contains("#LATEST"))
                     {
-                        final int beginIndex = path.lastIndexOf('#');
-                        final String latestPath;
-                        if (path.substring(beginIndex).startsWith("#LATEST"))
-                        {
-                            latestPath =
-                                    FileSystemUtils.getLatestPath(fs, new Path(path))
-                                                   .toUri()
-                                                   .getPath();
-                        }
-                        else
-                        {
-                            latestPath =
-                                    FileSystemUtils.getLatestPath(fs,
-                                                                  new Path(path.substring(0,
-                                                                                          beginIndex)))
-                                                   .toUri()
-                                                   .getPath()
-                                                   .concat(path.substring(beginIndex));
-                        }
-                        cachedFiles.add(latestPath);
-                        latestPathMap.put(path, latestPath);
+                        path =
+                                FileSystemUtils.getLatestPath(fs, new Path(path))
+                                               .toString();
                     }
-                    else
-                    {
-                        cachedFiles.add(file);
-                    }
+
+                    // if (fs.isDirectory(new Path(path)))
+                    // {
+                    // Path childPath = null;
+                    //
+                    // FileStatus[] children = fs.globStatus(new Path(path + "/*"));
+                    // for (FileStatus child : children)
+                    // {
+                    // childPath = child.getPath();
+                    //
+                    // if (fs.isDirectory(childPath))
+                    // continue;
+                    //
+                    // String name = childPath.getName();
+                    // if (name.startsWith("_") || name.startsWith("."))
+                    // continue;
+                    //
+                    // break;
+                    // }
+                    //
+                    // if (childPath == null)
+                    // throw new IOException("No files found in directory: " + path);
+                    //
+                    // path = childPath.toString();
+                    // }
+
+                    cachedFiles.add(path + "#" + fragment);
                 }
                 ((ObjectNode) job).put("cachedFiles", cachedFiles);
             }
         }
 
-        new PhysicalPlanWalker(plan, new ReplaceCachedFilePath(latestPathMap)).walk();
+        new PhysicalPlanWalker(plan, new AddSymlinksToCachedPath(symlinkMap)).walk();
 
         return plan;
     }
 
-    static final class ReplaceCachedFilePath extends PhysicalPlanVisitor
+    static final class AddSymlinksToCachedPath extends PhysicalPlanVisitor
     {
         private final Map<String, String> map;
 
-        ReplaceCachedFilePath(Map<String, String> map)
+        AddSymlinksToCachedPath(Map<String, String> map)
         {
             this.map = map;
         }
@@ -108,13 +138,34 @@ public class CachedFileAnalyzer implements PlanRewriter
         @Override
         public void visitOperator(JsonNode json, boolean isMapper)
         {
-            if (getText(json, "operator").equals("LOAD_CACHED_FILE"))
+            String type = getText(json, "operator");
+            if (type.equals("LOAD_CACHED_FILE") || type.equals("DICT_ENCODE")
+                    || type.equals("DICT_DECODE"))
             {
-                String path = getText(json, "path");
-                if (map.containsKey(path))
-                    ((ObjectNode) json).put("path", map.get(path));
+
+                if (!json.has("path"))
+                    return;
+
+                try
+                {
+                    String originalPath = getText(json, "path");
+                    URI uri = new URI(originalPath);
+                    String path = uri.getPath();
+
+                    if (map.containsKey(path))
+                    {
+                        String fragment = map.get(path);
+                        ((ObjectNode) json).put("path", path + "#" + fragment);
+                    }
+
+                }
+                catch (URISyntaxException e)
+                {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+
             }
         }
-
     }
 }

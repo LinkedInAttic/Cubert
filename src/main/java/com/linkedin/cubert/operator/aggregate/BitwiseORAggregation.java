@@ -1,9 +1,9 @@
 /* (c) 2014 LinkedIn Corp. All rights reserved.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
  * License at  http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed
  * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
  * CONDITIONS OF ANY KIND, either express or implied.
@@ -25,7 +25,7 @@ import com.linkedin.cubert.utils.JsonUtils;
 
 public class BitwiseORAggregation implements AggregationFunction
 {
-    private int bitmap;
+    private long bitmap;
     private int inputColumnIndex;
     private int outputColumnIndex;
 
@@ -61,7 +61,7 @@ public class BitwiseORAggregation implements AggregationFunction
 
         nonNullValueSeen = true;
 
-        int value = (Integer) input.get(inputColumnIndex);
+        long value = (Long) input.get(inputColumnIndex);
         bitmap |= value;
     }
 
@@ -98,10 +98,10 @@ public class BitwiseORAggregation implements AggregationFunction
         String outputColName = JsonUtils.getText(json, "output");
         DataType inputType = inputSchema.getType(inputSchema.getIndex(inputColName));
 
-        if (inputType != DataType.INT)
+        if (inputType != DataType.INT && inputType != DataType.LONG)
             throw new PreconditionException(PreconditionExceptionType.INVALID_SCHEMA,
                                             "Expected type of column " + inputColName
-                                                    + " is INT. Found: " + inputType);
+                                                    + " is INT OR LONG. Found: " + inputType);
 
         return new BlockSchema(inputType + " " + outputColName);
     }

@@ -1,9 +1,9 @@
 /* (c) 2014 LinkedIn Corp. All rights reserved.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
  * License at  http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed
  * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
  * CONDITIONS OF ANY KIND, either express or implied.
@@ -18,14 +18,15 @@ import com.linkedin.cubert.block.DataType;
 import com.linkedin.cubert.functions.Function;
 import com.linkedin.cubert.functions.PigEvalFuncWrapper;
 import com.linkedin.cubert.utils.JsonUtils;
+import com.linkedin.cubert.utils.ClassCache;
 
 /**
  * Creates a Function object. The function can be built-in function, a user-defined
  * function that subclasses {@code Function}, or a user-defined function that subclasses
  * Pig's {@code EvalFunc}.
- * 
+ *
  * @author Maneesh Varshney
- * 
+ *
  */
 public class FunctionFactory
 {
@@ -122,11 +123,11 @@ public class FunctionFactory
         return null;
     }
 
-    private static Object createFunctionObject(String name, JsonNode constructorArgs)
+    public static Object createFunctionObject(String name, JsonNode constructorArgs)
     {
         try
         {
-            Class<?> cls = Class.forName(name);
+            Class<?> cls = ClassCache.forName(name);
             if (constructorArgs == null || constructorArgs.isNull())
                 return cls.newInstance();
 

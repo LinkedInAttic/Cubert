@@ -1,9 +1,9 @@
 /* (c) 2014 LinkedIn Corp. All rights reserved.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
  * License at  http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed
  * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
  * CONDITIONS OF ANY KIND, either express or implied.
@@ -24,16 +24,11 @@ registerCommand: REGISTER path ';';
 functionDeclaration: FUNCTION (alias=ID)? uri '(' functionArgs? ')' ';';
 functionArgs: constantExpression (',' constantExpression)*;
 
-job: createDictionary | dictionaryJob | mapReduceJob;
+job: createDictionary | mapReduceJob;
 
 
-createDictionary: DICTIONARY ID (columnDictionary)+ ';';
+createDictionary: CREATEDICTIONARY ID (columnDictionary)+ ';';
 columnDictionary: COLUMN ID VALUES STRING (',' STRING)*;
-
-dictionaryJob: JOB name=STRING REFRESHDICTIONARY 
-                    FROM inputPaths INTO path 
-                    on columns (NULLS as nullval=ID)? 
-                    (DEFAULTVALUE defaultval=ID)? (unsplittable=UNSPLITTABLE)? ';';
 
 mapReduceJob: JOB
 				name=STRING
@@ -48,7 +43,9 @@ mapCommands: MAP '{' inputCommand statement*  '}';
 
 macroShuffleCommand: shuffleCommand
                      | blockgenShuffleCommand
-                     | cubeShuffleCommand;
+                     | cubeShuffleCommand
+                     | dictionaryShuffleCommand
+                     | distinctShuffleCommand;
 
 shuffleCommand: SHUFFLE ID PARTITIONEDON columns
                             (SORTEDON columns)?
@@ -57,12 +54,15 @@ blockgenShuffleCommand: BLOCKGEN (distinct=DISTINCT)? ID by blockgenType=ID
                             (blockgenValue=INT | relation=path)?
                             PARTITIONEDON columns
                             (SORTEDON columns)? ';';
+dictionaryShuffleCommand: DICTIONARY ID on columns ';';
+distinctShuffleCommand: DISTINCT ID ';';
+
 reduceCommands: REDUCE '{' statement+ '}';
 
 cubeShuffleCommand: cubeStatement ';';
 
-inputCommand: ID '=' LOAD inputPaths using format=ID ('(' params? ')')?';';
-outputCommand: STORE ID INTO path using format=ID ('(' params? ')')?  ';';
+inputCommand: ID '=' LOAD inputPaths using (format=ID | classname=uri) ('(' params? ')')?';';
+outputCommand: STORE ID INTO path using (format=ID | classname=uri) ('(' params? ')')?  ';';
 
 
 statement: operatorCommand | multipassGroup;
@@ -94,12 +94,13 @@ operator: noopOperator
 		| gatherOperator
 		| validateOperator
 		| topNOperator
+		| rankOperator
 		| uriOperator
 		;
 
 noopOperator: NOOP ID (ASSERT PARTITIONEDON partitionKeys=columns SORTEDON sortKeys=columns)?;
-encodeOperator: ENCODE ID using (path | dictname=ID) (NULLS as nullas=ID)?;
-decodeOperator: DECODE ID using (path | dictname=ID);
+encodeOperator: ENCODE ID on columns using (path | dictname=ID) (NULLS as nullas=ID)?;
+decodeOperator: DECODE ID on columns using (path | dictname=ID);
 filterOperator: FILTER ID by expression;
 groupByOperator: GROUP ID by (ALL | columns) (AGGREGATES aggregateList)? (summaryRewriteClause) ?;
 joinOperator: JOIN (joinType)? ID by columns ',' ID by columns ;
@@ -111,7 +112,7 @@ sortOperator: SORT ID on columns;
 limitOperator: LIMIT ID INT;
 cubeOperator: cubeStatement;
 // cubeStatement is referenced by cubeOperator as well as cubeShuffleCommand
-cubeStatement: CUBE ID by outer=columns (INNER inner=columns)? AGGREGATES cubeAggregateList groupingSetsClause? (HTSIZE htsize=INT)?;
+cubeStatement: CUBE ID by outer=columns (INNER inner=columns)? AGGREGATES cubeAggregateList (groupingSetsClause|groupingCombosClause|rollupsClause)? (HTSIZE htsize=INT)?;
 duplicateOperator: DUPLICATE ID INT TIMES (COUNTERAS ID)?;
 generateOperator: FROM ID GENERATE generateExpressionList;
 flattenOperator: FLATTEN ID by flattenItem (',' flattenItem)*;
@@ -122,9 +123,12 @@ pivotOperator: PIVOT (inmemory=INMEMORY)? ID (on columns) ? ;
 gatherOperator: GATHER ID (',' ID)*;
 validateOperator: VALIDATE ID by blockgenType=ID (blockgenValue=INT | index=path)? PARTITIONEDON columns  (SORTEDON columns)?;
 topNOperator: TOP (n=INT)? FROM ID GROUP by group=columns ORDERBY order=columns;
+rankOperator: RANK inputRelation=ID as rankColumn=ID (GROUP by group=columns ORDERBY order=columns)?;
 uriOperator: uri idlist '{' params? '}';
 
 groupingSetsClause: GROUPINGSETS cuboid (',' cuboid)*;
+groupingCombosClause: GROUPINGCOMBOS n=INT;
+rollupsClause: ROLLUPS cuboid (',' cuboid)*;
 measure: column=ID (as outputName=ID)?;
 cuboid: LBRACKET columns RBRACKET;
 
@@ -228,6 +232,8 @@ uriFragment : ID
     | GENERATE
     | GROUP
     | GROUPINGSETS
+    | GROUPINGCOMBOS
+    | ROLLUPS
     | HASHJOIN
     | HTSIZE
     | IF
@@ -254,7 +260,6 @@ uriFragment : ID
     | PROGRAM
     | REDUCE
     | REDUCERS
-    | REFRESHDICTIONARY
     | REGISTER
     | RM
     | SET
@@ -289,6 +294,7 @@ CASE: 'CASE' | 'case';
 COLUMN: 'COLUMN' | 'column';
 COMBINE: 'COMBINE' | 'combine';
 COUNTERAS: 'COUNTER AS' | 'counter as';
+CREATEDICTIONARY: 'CREATE DICTIONARY' | 'create dictionary';
 CUBE: 'CUBE' | 'cube';
 DECODE: 'DECODE' | 'decode';
 DEFAULTVALUE: 'DEFAULTVALUE' | 'defaultvalue';
@@ -306,6 +312,8 @@ GATHER: 'GATHER' | 'gather';
 GENERATE: 'GENERATE' | 'generate';
 GROUP: 'GROUP' | 'group';
 GROUPINGSETS: 'GROUPING SETS' | 'grouping sets';
+GROUPINGCOMBOS: 'GROUPING COMBOS' | 'grouping combos';
+ROLLUPS: 'ROLLUPS' | 'rollups';
 HASHJOIN: 'HASH-JOIN' | 'hash-join';
 HTSIZE: 'HTSIZE' | 'htsize';
 IF: 'IF' | 'if';
@@ -330,9 +338,9 @@ ORDERBY: 'ORDER BY' | 'order by';
 PARTITIONEDON: 'PARTITIONED ON' | 'partitioned on';
 PIVOT: 'PIVOT' | 'pivot';
 PROGRAM: 'PROGRAM' | 'program';
+RANK: 'RANK' | 'rank';
 REDUCE: 'REDUCE' | 'reduce';
 REDUCERS: 'REDUCERS' | 'reducers';
-REFRESHDICTIONARY: 'REFRESH-DICTIONARY' | 'refresh-dictionary';
 REGISTER: 'REGISTER' | 'register';
 RM: 'RM' | 'rm';
 SET: 'SET' | 'set';

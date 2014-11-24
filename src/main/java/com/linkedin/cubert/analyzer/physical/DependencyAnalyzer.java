@@ -14,6 +14,8 @@ package com.linkedin.cubert.analyzer.physical;
 import static com.linkedin.cubert.utils.JsonUtils.getText;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -114,11 +116,37 @@ public class DependencyAnalyzer extends PhysicalPlanVisitor implements PlanRewri
 
         if (type.equals("LOAD_CACHED_FILE"))
         {
-            currentJob.addInput(getText(json, "type"), getText(json, "path"), json);
+            try
+            {
+                String pathWithoutFragment = new URI(getText(json, "path")).getPath();
+                currentJob.addInput(getText(json, "type"), pathWithoutFragment, json);
+            }
+            catch (URISyntaxException e)
+            {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+
         }
-        if (type.equals("TEE"))
+        else if (type.equals("TEE"))
         {
             currentJob.addOutput(getText(json, "type"), getText(json, "path"), json);
+        }
+        else if (type.equals("DICT_ENCODE") || type.equals("DICT_DECODE"))
+        {
+            if (json.has("path"))
+            {
+                try
+                {
+                    String pathWithoutFragment = new URI(getText(json, "path")).getPath();
+                    currentJob.addInput("AVRO", pathWithoutFragment, json);
+                }
+                catch (URISyntaxException e)
+                {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            }
         }
     }
 

@@ -18,11 +18,11 @@ import org.apache.avro.file.DataFileReader;
 import org.apache.avro.file.SeekableFileInput;
 import org.apache.avro.io.DatumReader;
 import org.apache.pig.data.Tuple;
-import org.apache.pig.piggybank.storage.avro.PigAvroDatumReader;
 import org.codehaus.jackson.JsonNode;
 
 import com.linkedin.cubert.block.BlockSchema;
 import com.linkedin.cubert.io.CachedFileReader;
+import com.linkedin.cubert.pig.piggybank.storage.avro.PigAvroDatumReader;
 import com.linkedin.cubert.utils.AvroUtils;
 
 public class AvroFileReader implements CachedFileReader

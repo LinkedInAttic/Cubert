@@ -1,12 +1,13 @@
-/* (c) 2014 LinkedIn Corp. All rights reserved.
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use
- * this file except in compliance with the License. You may obtain a copy of the
- * License at  http://www.apache.org/licenses/LICENSE-2.0
- * 
- * Unless required by applicable law or agreed to in writing, software distributed
- * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
- * CONDITIONS OF ANY KIND, either express or implied.
+/*
+ * (c) 2014 LinkedIn Corp. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this
+ * file except in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.
  */
 
 // Generated from CubertPhysical.g4 by ANTLR 4.1
@@ -18,9 +19,11 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -62,6 +65,8 @@ import com.linkedin.cubert.antlr4.CubertPhysicalParser.CubeOperatorContext;
 import com.linkedin.cubert.antlr4.CubertPhysicalParser.CubeShuffleCommandContext;
 import com.linkedin.cubert.antlr4.CubertPhysicalParser.CubeStatementContext;
 import com.linkedin.cubert.antlr4.CubertPhysicalParser.CuboidContext;
+import com.linkedin.cubert.antlr4.CubertPhysicalParser.DictionaryShuffleCommandContext;
+import com.linkedin.cubert.antlr4.CubertPhysicalParser.DistinctShuffleCommandContext;
 import com.linkedin.cubert.antlr4.CubertPhysicalParser.ExpressionContext;
 import com.linkedin.cubert.antlr4.CubertPhysicalParser.FlattenItemContext;
 import com.linkedin.cubert.antlr4.CubertPhysicalParser.FlattenOperatorContext;
@@ -80,6 +85,8 @@ import com.linkedin.cubert.antlr4.CubertPhysicalParser.OnCompletionTaskContext;
 import com.linkedin.cubert.antlr4.CubertPhysicalParser.OnCompletionTasksContext;
 import com.linkedin.cubert.antlr4.CubertPhysicalParser.PathContext;
 import com.linkedin.cubert.antlr4.CubertPhysicalParser.PivotOperatorContext;
+import com.linkedin.cubert.antlr4.CubertPhysicalParser.RankOperatorContext;
+import com.linkedin.cubert.antlr4.CubertPhysicalParser.RollupsClauseContext;
 import com.linkedin.cubert.antlr4.CubertPhysicalParser.SummaryRewriteClauseContext;
 import com.linkedin.cubert.antlr4.CubertPhysicalParser.TeeOperatorContext;
 import com.linkedin.cubert.antlr4.CubertPhysicalParser.TerminalExpressionContext;
@@ -90,6 +97,8 @@ import com.linkedin.cubert.antlr4.CubertPhysicalParser.TypeDefinitionsContext;
 import com.linkedin.cubert.antlr4.CubertPhysicalParser.UriOperatorContext;
 import com.linkedin.cubert.functions.Function;
 import com.linkedin.cubert.functions.builtin.FunctionFactory;
+import com.linkedin.cubert.io.IndexCacheable;
+import com.linkedin.cubert.io.NeedCachedFiles;
 import com.linkedin.cubert.operator.BlockOperator;
 import com.linkedin.cubert.operator.TupleOperator;
 import com.linkedin.cubert.operator.aggregate.AggregationFunctions;
@@ -126,7 +135,8 @@ public class PhysicalParser
     }
 
     public static void parseLocal(String fileName, String outFileName) throws FileNotFoundException,
-            IOException
+            IOException,
+            ParseException
     {
 
         CharStream inputStream = new ANTLRInputStream(new FileInputStream(fileName));
@@ -136,14 +146,15 @@ public class PhysicalParser
         parseInputStream(inputStream, outStream);
     }
 
-    public static ObjectNode parseProgram(String programString) throws IOException
+    public static ObjectNode parseProgram(String programString) throws IOException,
+            ParseException
     {
         CharStream inputStream =
                 new ANTLRInputStream(new ByteArrayInputStream(programString.getBytes()));
         return parseInputStream(inputStream);
     }
 
-    private static ObjectNode parseInputStream(CharStream inputStream)
+    private static ObjectNode parseInputStream(CharStream inputStream) throws ParseException
     {
         PhysicalListener listener = parsingTask(inputStream);
         return listener.programNode;
@@ -154,14 +165,14 @@ public class PhysicalParser
 
     }
 
-    private static void parseInputStream(CharStream input, FileOutputStream outStream)
+    private static void parseInputStream(CharStream input, FileOutputStream outStream) throws ParseException
 
     {
         PhysicalListener listener = parsingTask(input);
         writeOutput(listener, outStream);
     }
 
-    private static PhysicalListener parsingTask(CharStream input)
+    private static PhysicalListener parsingTask(CharStream input) throws ParseException
     {
         CubertPhysicalLexer lexer = new CubertPhysicalLexer(input);
         CommonTokenStream tokenStream = new CommonTokenStream(lexer);
@@ -176,20 +187,12 @@ public class PhysicalParser
         PhysicalListener listener = new PhysicalListener();
         listener.input = input;
 
-        try
-        {
-            walker.walk(listener, ptree);
-        }
-        catch (Exception e)
-        {
-            System.err.println("\nCannot parse cubert script. Exiting.");
-            e.printStackTrace(System.err);
-            System.exit(-1);
-        }
+        walker.walk(listener, ptree);
+
         if (errorListener.hasErrors)
         {
             System.err.println("\nCannot parse cubert script. Exiting.");
-            System.exit(-1);
+            throw new ParseException(null, 0);
         }
 
         return listener;
@@ -349,7 +352,11 @@ public class PhysicalParser
             addLine(ctx, inputNode);
 
             inputNode.put("name", ctx.ID().get(0).getText());
-            inputNode.put("type", ctx.ID().get(1).getText());
+
+            if (ctx.format != null)
+                inputNode.put("type", ctx.format.getText());
+            else
+                inputNode.put("type", ctx.classname.getText());
 
             ObjectNode paramsNode = objMapper.createObjectNode();
             if (ctx.params() != null)
@@ -403,7 +410,10 @@ public class PhysicalParser
         {
             outputCommandNode.put("name", ctx.ID().get(0).getText());
             outputCommandNode.put("path", cleanPath(ctx.path()));
-            outputCommandNode.put("type", ctx.ID().get(1).getText());
+            if (ctx.format != null)
+                outputCommandNode.put("type", ctx.format.getText());
+            else
+                outputCommandNode.put("type", ctx.classname.getText());
 
             addLine(ctx, outputCommandNode);
             ObjectNode paramsNode = objMapper.createObjectNode();
@@ -429,6 +439,14 @@ public class PhysicalParser
             operatorNode.put("operator", "DICT_ENCODE");
             operatorNode.put("input", ctx.ID(0).getText());
             operatorNode.put("output", operatorCommandLhs);
+
+            ArrayNode anode = objMapper.createArrayNode();
+
+            for (TerminalNode id : ctx.columns().ID())
+                anode.add(id.getText());
+
+            operatorNode.put("columns", anode);
+
             if (ctx.path() == null)
             {
                 ObjectNode dict = inlineDictionaries.get(ctx.dictname.getText());
@@ -440,7 +458,7 @@ public class PhysicalParser
             else
             {
                 String dictionaryPath = cleanPath(ctx.path());
-                operatorNode.put("dictionary", dictionaryPath);
+                operatorNode.put("path", dictionaryPath);
                 cachedFiles.add(dictionaryPath);
             }
 
@@ -463,6 +481,14 @@ public class PhysicalParser
             operatorNode.put("operator", "DICT_DECODE");
             operatorNode.put("input", ctx.ID(0).getText());
             operatorNode.put("output", operatorCommandLhs);
+
+            ArrayNode anode = objMapper.createArrayNode();
+
+            for (TerminalNode id : ctx.columns().ID())
+                anode.add(id.getText());
+
+            operatorNode.put("columns", anode);
+
             if (ctx.path() == null)
             {
                 ObjectNode dict = inlineDictionaries.get(ctx.dictname.getText());
@@ -474,7 +500,7 @@ public class PhysicalParser
             else
             {
                 String dictionaryPath = cleanPath(ctx.path());
-                operatorNode.put("dictionary", dictionaryPath);
+                operatorNode.put("path", dictionaryPath);
                 cachedFiles.add(dictionaryPath);
             }
         }
@@ -719,8 +745,6 @@ public class PhysicalParser
                 ArrayNode constructorArgsNode =
                         createConstructorArgsNode(aggFunction, constructorArgs);
                 aggNode.put("constructorArgs", constructorArgsNode);
-                ObjectNode pigudfs = (ObjectNode) this.mapReduceJobNode.get("pigudfs");
-                pigudfs.put(aggFunction, constructorArgsNode);
             }
         }
 
@@ -822,6 +846,7 @@ public class PhysicalParser
         public void enterMapReduceJob(@NotNull CubertPhysicalParser.MapReduceJobContext ctx)
         {
             this.mapReduceJobNode = objMapper.createObjectNode();
+            this.mapReduceJobNode.put("pigudfs", objMapper.createObjectNode());
             this.cachedFiles.clear();
             this.mapReduceJobNode.put("map", objMapper.createArrayNode());
 
@@ -881,49 +906,6 @@ public class PhysicalParser
             }
         }
 
-        // @Override
-        // public void exitCollateVectorBlockOperator(@NotNull
-        // CubertPhysicalParser.CollateVectorBlockOperatorContext ctx)
-        // {
-        // operatorNode.put("operator", "COLLATE_VECTOR_BLOCK");
-        //
-        // // Need to make all blocks available as 'input'. This is cheating.
-        // ArrayNode inputListNode = objMapper.createArrayNode();
-        // inputListNode.add(ctx.inputRelation.getText());
-        // inputListNode.add(ctx.metaDataRelation.getText());
-        // operatorNode.put("input", inputListNode);
-        //
-        // // #1. name of input relation
-        // operatorNode.put("inputBlock", ctx.inputRelation.getText());
-        //
-        // operatorNode.put("output", operatorCommandLhs);
-        //
-        // // #2. (pivoted) lookup column in input relation
-        // operatorNode.put("lookupColumn", ctx.pivotedColumn.getText());
-        //
-        // // #3. meta data : input relation name that contains meta data
-        // operatorNode.put("metaRelationName", ctx.metaDataRelation.getText());
-        //
-        // // #4. meta data : co-ordinate column names in meta info table
-        // {
-        // ArrayNode anode = objMapper.createArrayNode();
-        // for (TerminalNode id : ctx.coordinateColumns.ID())
-        // anode.add(id.getText());
-        // operatorNode.put("coordinateColumns", anode);
-        // }
-        //
-        // // #5. identifier column name in meta and output relations
-        // operatorNode.put("identifierColumn", ctx.lableColumn.getText());
-        //
-        // // #6. combine columns for output relation.
-        // {
-        // ArrayNode anode = objMapper.createArrayNode();
-        // for (TerminalNode id : ctx.combineColumns.ID())
-        // anode.add(id.getText());
-        // operatorNode.put("combineColumns", anode);
-        // }
-        // }
-
         @Override
         public void exitValidateOperator(@NotNull CubertPhysicalParser.ValidateOperatorContext ctx)
         {
@@ -956,20 +938,6 @@ public class PhysicalParser
             }
         }
 
-        private JsonNode createGroupingSetsNode(GroupingSetsClauseContext groupingSetsClause)
-        {
-            ArrayNode groupingSetsNode = objMapper.createArrayNode();
-            for (CuboidContext cuboidContext : groupingSetsClause.cuboid())
-            {
-                StringBuffer cuboidBuffer = new StringBuffer();
-                emitCommaSeparatedIDList(cuboidBuffer,
-                                         cuboidContext.columns().ID(),
-                                         false);
-                groupingSetsNode.add(cuboidBuffer.toString());
-            }
-            return groupingSetsNode;
-        }
-
         @Override
         public void exitNoopOperator(NoopOperatorContext ctx)
         {
@@ -985,58 +953,59 @@ public class PhysicalParser
                 operatorNode.put("assertSortKeys", createIDListNode(ctx.sortKeys.ID()));
         }
 
-        @Override
-        public void exitDictionaryJob(@NotNull CubertPhysicalParser.DictionaryJobContext ctx)
-        {
-            ObjectNode dictionaryJobNode = objMapper.createObjectNode();
-            dictionaryJobNode.put("name", CommonUtils.stripQuotes(ctx.STRING().getText()));
-            dictionaryJobNode.put("reducers", 1);
-            dictionaryJobNode.put("jobType", "GENERATE_DICTIONARY");
-
-            ArrayNode mapsNode = objMapper.createArrayNode();
-            dictionaryJobNode.put("map", mapsNode);
-
-            ObjectNode mapNode = objMapper.createObjectNode();
-            mapsNode.add(mapNode);
-
-            ObjectNode inputNode = objMapper.createObjectNode();
-            inputNode.put("name", "inputRelation");
-            ArrayNode inputPathsNode = this.createInputPathsNode(ctx.inputPaths());
-            inputNode.put("path", inputPathsNode);
-            inputNode.put("type", "AVRO");
-            if (ctx.nullval != null)
-                inputNode.put("replaceNull", ctx.nullval.getText());
-
-            if (ctx.defaultval != null)
-                inputNode.put("defaultValue", ctx.defaultval.getText());
-
-            if (ctx.unsplittable != null)
-                inputNode.put("unsplittable", true);
-            else
-                inputNode.put("unsplittable", false);
-
-            mapNode.put("input", inputNode);
-            mapNode.put("operators", objMapper.createArrayNode());
-
-            ObjectNode outputNode = objMapper.createObjectNode();
-            outputNode.put("name", "inputRelation");
-            outputNode.put("path", cleanPath(ctx.path()));
-            outputNode.put("type", "AVRO");
-
-            StringBuffer columnBuffer = new StringBuffer();
-            boolean first = true;
-            for (TerminalNode cctx : ctx.columns().ID())
-            {
-                columnBuffer.append((first ? "int " : ", int ") + cctx.getText());
-                first = false;
-            }
-            outputNode.put("columns", columnBuffer.toString());
-            dictionaryJobNode.put("output", outputNode);
-
-            addLine(ctx, dictionaryJobNode);
-
-            jobsNode.add(dictionaryJobNode);
-        }
+        // @Override
+        // public void exitDictionaryJob(@NotNull
+        // CubertPhysicalParser.DictionaryJobContext ctx)
+        // {
+        // ObjectNode dictionaryJobNode = objMapper.createObjectNode();
+        // dictionaryJobNode.put("name", CommonUtils.stripQuotes(ctx.STRING().getText()));
+        // dictionaryJobNode.put("reducers", 1);
+        // dictionaryJobNode.put("jobType", "GENERATE_DICTIONARY");
+        //
+        // ArrayNode mapsNode = objMapper.createArrayNode();
+        // dictionaryJobNode.put("map", mapsNode);
+        //
+        // ObjectNode mapNode = objMapper.createObjectNode();
+        // mapsNode.add(mapNode);
+        //
+        // ObjectNode inputNode = objMapper.createObjectNode();
+        // inputNode.put("name", "inputRelation");
+        // ArrayNode inputPathsNode = this.createInputPathsNode(ctx.inputPaths());
+        // inputNode.put("path", inputPathsNode);
+        // inputNode.put("type", "AVRO");
+        // if (ctx.nullval != null)
+        // inputNode.put("replaceNull", ctx.nullval.getText());
+        //
+        // if (ctx.defaultval != null)
+        // inputNode.put("defaultValue", ctx.defaultval.getText());
+        //
+        // if (ctx.unsplittable != null)
+        // inputNode.put("unsplittable", true);
+        // else
+        // inputNode.put("unsplittable", false);
+        //
+        // mapNode.put("input", inputNode);
+        // mapNode.put("operators", objMapper.createArrayNode());
+        //
+        // ObjectNode outputNode = objMapper.createObjectNode();
+        // outputNode.put("name", "inputRelation");
+        // outputNode.put("path", cleanPath(ctx.path()));
+        // outputNode.put("type", "AVRO");
+        //
+        // StringBuffer columnBuffer = new StringBuffer();
+        // boolean first = true;
+        // for (TerminalNode cctx : ctx.columns().ID())
+        // {
+        // columnBuffer.append((first ? "int " : ", int ") + cctx.getText());
+        // first = false;
+        // }
+        // outputNode.put("columns", columnBuffer.toString());
+        // dictionaryJobNode.put("output", outputNode);
+        //
+        // addLine(ctx, dictionaryJobNode);
+        //
+        // jobsNode.add(dictionaryJobNode);
+        // }
 
         private String operatorToFunctionName(String bstr)
         {
@@ -1167,7 +1136,8 @@ public class PhysicalParser
                 }
                 ObjectNode json = packFunctionNode(function, asArray);
 
-                List<Object> constructorArgs = this.functionCtorArgs.get(function);
+                List<Object> constructorArgs =
+                        this.functionCtorArgs.get(ctx.uri().getText());
                 ArrayNode constructorArgsNode =
                         createConstructorArgsNode(function, constructorArgs);
 
@@ -1491,18 +1461,21 @@ public class PhysicalParser
                 }
             }
 
+            String name = ctx.uri().getText();
+
             if (ctx.alias != null)
             {
-                if (functionAliasMap.containsKey(ctx.alias.getText()))
+                name = ctx.alias.getText();
+
+                if (functionAliasMap.containsKey(name))
                 {
-                    System.err.println("Function alias [" + ctx.alias.getText()
+                    throw new IllegalStateException("Function alias [" + name
                             + "] appears more than once in the script.");
-                    System.exit(-1);
                 }
-                functionAliasMap.put(ctx.alias.getText(), ctx.uri().getText());
+                functionAliasMap.put(name, ctx.uri().getText());
             }
 
-            functionCtorArgs.put(ctx.uri().getText(), ctorArgs);
+            functionCtorArgs.put(name, ctorArgs);
         }
 
         @Override
@@ -1635,6 +1608,31 @@ public class PhysicalParser
         }
 
         @Override
+        public void exitRankOperator(RankOperatorContext ctx)
+        {
+            operatorNode.put("operator", "RANK");
+            operatorNode.put("output", operatorCommandLhs);
+            operatorNode.put("input", ctx.inputRelation.getText());
+            operatorNode.put("rankAs", ctx.rankColumn.getText());
+
+            ArrayNode grps = objMapper.createArrayNode();
+            if (ctx.group != null)
+            {
+                for (TerminalNode id : ctx.group.ID())
+                    grps.add(id.getText());
+            }
+            operatorNode.put("groupBy", grps);
+
+            ArrayNode ords = objMapper.createArrayNode();
+            if (ctx.order != null)
+            {
+                for (TerminalNode id : ctx.order.ID())
+                    ords.add(id.getText());
+            }
+            operatorNode.put("orderBy", ords);
+        }
+
+        @Override
         public void exitGatherOperator(GatherOperatorContext ctx)
         {
             operatorNode.put("operator", "GATHER");
@@ -1682,6 +1680,25 @@ public class PhysicalParser
             addLine(ctx, shuffleCommandNode);
         }
 
+        @Override
+        public void exitDictionaryShuffleCommand(DictionaryShuffleCommandContext ctx)
+        {
+            shuffleCommandNode = null;
+
+            if (ctx.columns() != null)
+                shuffleCommandNode =
+                        JsonUtils.createObjectNode("type",
+                                                   "CREATE-DICTIONARY",
+                                                   "columns",
+                                                   ctx.columns().getText(),
+                                                   "name",
+                                                   ctx.ID().getText());
+            else
+                System.err.println("Malformed dictionary job");
+
+            addLine(ctx, shuffleCommandNode);
+        }
+
         private void addLine(ParserRuleContext ctx, JsonNode node)
         {
             String line =
@@ -1725,6 +1742,151 @@ public class PhysicalParser
             return constructorArgsNode;
         }
 
+        private JsonNode createGroupingSetsNode(GroupingSetsClauseContext groupingSetsClause)
+        {
+            ArrayNode groupingSetsNode = objMapper.createArrayNode();
+            for (CuboidContext cuboidContext : groupingSetsClause.cuboid())
+            {
+                StringBuffer cuboidBuffer = new StringBuffer();
+                emitCommaSeparatedIDList(cuboidBuffer,
+                                         cuboidContext.columns().ID(),
+                                         false);
+                groupingSetsNode.add(cuboidBuffer.toString());
+            }
+            return groupingSetsNode;
+        }
+
+        private <T> List<List<T>> combinations(List<T> elements, int level, int idx)
+        {
+            List<List<T>> combos = new LinkedList<List<T>>();
+            for (int i = idx; i < elements.size(); i++)
+            {
+                List<T> leaf = new LinkedList<T>();
+                leaf.add(elements.get(i));
+                combos.add(leaf);
+
+                if (level == 1 || i == elements.size() - 1)
+                    continue;
+
+                List<List<T>> recCombos = combinations(elements, level - 1, i + 1);
+                for (List<T> recCombo : recCombos)
+                {
+                    recCombo.add(elements.get(i));
+                    combos.add((recCombo));
+                }
+            }
+            return combos;
+        }
+
+        private JsonNode createGroupingCombosNode(int comboLevels, List<TerminalNode> id)
+        {
+            ArrayNode comboGSNode = objMapper.createArrayNode();
+            // Explicitly add the empty node for complete rollup.
+            comboGSNode.add("");
+
+            for (List<TerminalNode> group : combinations(id, comboLevels, 0))
+            {
+                StringBuffer gsBuffer = new StringBuffer();
+                emitCommaSeparatedIDList(gsBuffer, group, false);
+                comboGSNode.add(gsBuffer.toString());
+            }
+
+            return comboGSNode;
+        }
+
+        /**
+         * Given a list of elements <code> { a, b, c } </code>, return a rollup set
+         * <code> { {}, { a }, { a, b } , { a, b, c } ] </code>
+         * 
+         * @param group
+         * @return
+         */
+        private <T> List<List<T>> createOneRollup(List<T> group)
+        {
+            List<List<T>> rollupList = new LinkedList<List<T>>();
+            rollupList.add(new LinkedList<T>());
+
+            List<T> base = null;
+            for (T column : group)
+            {
+                List<T> thisRollup = new LinkedList<T>();
+                if (base != null)
+                    thisRollup.addAll(base);
+
+                thisRollup.add(column);
+                rollupList.add(thisRollup);
+                base = thisRollup;
+            }
+
+            return rollupList;
+        }
+
+        /**
+         * Given two lists of lists
+         * 
+         * <pre>
+         * A := { { a } { b, c } }
+         * B := { { d } { e } }
+         * A x B := { { a, d } { a, e } { b, c, d } { b, c, e } }
+         * </pre>
+         * 
+         * @param leftOperand
+         * @param rightOperand
+         * @return
+         */
+        private <T> List<List<T>> multiply(List<List<T>> leftOperand,
+                                           List<List<T>> rightOperand)
+        {
+            if (leftOperand == null)
+                return rightOperand;
+
+            List<List<T>> product = new LinkedList<List<T>>(leftOperand);
+
+            for (List<T> left : leftOperand)
+            {
+                for (List<T> right : rightOperand)
+                {
+                    // special case -- ignore right side empty list during product to
+                    // avoid duplicates
+                    if (right.isEmpty())
+                        continue;
+
+                    List<T> partialProduct = new LinkedList<T>(left);
+                    partialProduct.addAll(right);
+                    product.add(partialProduct);
+                }
+            }
+
+            return product;
+        }
+
+        private JsonNode createRollupsNode(RollupsClauseContext rollupsClause)
+        {
+            List<List<TerminalNode>> growthList = null;
+            for (CuboidContext cuboidContext : rollupsClause.cuboid())
+                growthList =
+                        multiply(growthList,
+                                 createOneRollup(cuboidContext.columns().ID()));
+
+            ArrayNode rollupSetsNode = objMapper.createArrayNode();
+            // Explicitly add the empty node for complete rollup.
+            rollupSetsNode.add("");
+
+            for (List<TerminalNode> group : growthList)
+            {
+                // disregard intermediate rollups
+                if (group.isEmpty())
+                    continue;
+
+                StringBuffer cuboidBuffer = new StringBuffer();
+                emitCommaSeparatedIDList(cuboidBuffer, group, false);
+                rollupSetsNode.add(cuboidBuffer.toString());
+            }
+            growthList = null;
+
+            return rollupSetsNode;
+        }
+
         private void parseCubeStatement(CubeStatementContext ctx, ObjectNode json)
         {
             json.put("operator", "CUBE");
@@ -1733,8 +1895,15 @@ public class PhysicalParser
             if (ctx.inner != null)
                 json.put("innerDimensions", createIDListNode(ctx.inner.ID()));
 
+            // Generate grouping sets for cube operator
             if (ctx.groupingSetsClause() != null)
                 json.put("groupingSets", createGroupingSetsNode(ctx.groupingSetsClause()));
+            else if (ctx.groupingCombosClause() != null)
+                json.put("groupingSets",
+                         createGroupingCombosNode(Integer.parseInt(ctx.groupingCombosClause().n.getText()),
+                                                  ctx.outer.ID()));
+            else if (ctx.rollupsClause() != null)
+                json.put("groupingSets", createRollupsNode(ctx.rollupsClause()));
 
             if (ctx.htsize != null)
                 json.put("hashTableSize", Integer.parseInt(ctx.htsize.getText()));
@@ -1823,14 +1992,38 @@ public class PhysicalParser
         }
 
         @Override
+        public void exitDistinctShuffleCommand(DistinctShuffleCommandContext ctx)
+        {
+            shuffleCommandNode = this.objMapper.createObjectNode();
+            shuffleCommandNode.put("name", ctx.ID().getText());
+            shuffleCommandNode.put("type", "DISTINCT");
+
+            addLine(ctx, shuffleCommandNode);
+        }
+
+        @Override
         public void exitUriOperator(UriOperatorContext ctx)
         {
             String classname = ctx.uri().getText();
+
+            // check if there are constructor args
+            List<Object> constructorArgs = functionCtorArgs.get(classname);
+
+            ArrayNode constructorArgsNode =
+                    createConstructorArgsNode(classname, constructorArgs);
+            if (constructorArgs != null)
+                operatorNode.put("constructorArgs", constructorArgsNode);
+
+            // check if this is an alias name
+            if (functionAliasMap.containsKey(classname))
+                classname = functionAliasMap.get(classname);
+
             Object object = null;
             try
             {
-                Class<?> cls = Class.forName(classname);
-                object = cls.newInstance();
+                object =
+                        FunctionFactory.createFunctionObject(classname,
+                                                             constructorArgsNode);
             }
             catch (Exception e)
             {
@@ -1845,7 +2038,7 @@ public class PhysicalParser
                 throw new RuntimeException(classname
                         + " should implement TupleOperator or BlockOperator interface");
 
-            operatorNode.put("class", ctx.uri().getText());
+            operatorNode.put("class", classname);
             operatorNode.put("input", createIDListNode(ctx.idlist().ID()));
             operatorNode.put("output", operatorCommandLhs);
 
@@ -1860,6 +2053,34 @@ public class PhysicalParser
                 }
             }
             operatorNode.put("args", paramsNode);
+
+            // check if this operator want to cache files
+            if (object instanceof NeedCachedFiles)
+            {
+                List<String> paths = ((NeedCachedFiles) object).getCachedFiles();
+                if (paths != null)
+                    this.cachedFiles.addAll(paths);
+            }
+
+            // check if this operator wants to cache an index
+            if (object instanceof IndexCacheable)
+            {
+                List<String> paths = ((IndexCacheable) object).getCachedIndices();
+                ArrayNode indexNameJson = objMapper.createArrayNode();
+                for (String path : paths)
+                {
+                    String indexName = generateIndexName();
+
+                    ObjectNode cacheIndex = objMapper.createObjectNode();
+                    cacheIndex.put("name", indexName);
+                    cacheIndex.put("path", path);
+                    cacheIndexNode.add(cacheIndex);
+
+                    indexNameJson.add(indexName);
+                }
+
+                operatorNode.put("index", indexNameJson);
+            }
         }
 
         @Override
@@ -1904,12 +2125,6 @@ public class PhysicalParser
 
             programNode.put("onCompletion", tasks);
         }
-    }
 
-    public static void main(String[] args) throws FileNotFoundException,
-            IOException
-    {
-        PhysicalParser.parseLocal(args[0], args[1]);
     }
-
 }

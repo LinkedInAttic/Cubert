@@ -19,7 +19,8 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.pig.piggybank.storage.avro.PigAvroOutputFormat;
+
+import com.linkedin.cubert.pig.piggybank.storage.avro.PigAvroOutputFormat;
 
 public class PigAvroOutputFormatAdaptor extends FileOutputFormat<NullWritable, Object>
 {

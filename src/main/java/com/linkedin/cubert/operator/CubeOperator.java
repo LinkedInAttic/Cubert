@@ -49,11 +49,12 @@ import com.linkedin.cubert.operator.cube.ValueAggregatorFactory;
 import com.linkedin.cubert.utils.CommonUtils;
 import com.linkedin.cubert.utils.JsonUtils;
 import com.linkedin.cubert.utils.Pair;
+import com.linkedin.cubert.utils.ClassCache;
 
 /**
- * 
+ *
  * @author Maneesh Varshney
- * 
+ *
  */
 public class CubeOperator implements TupleOperator
 {
@@ -159,7 +160,7 @@ public class CubeOperator implements TupleOperator
      * Process input tuples for cubing without inner dimensions. Note that
      * DupleCubeAggregators cannot be used here (any attempt to use such aggregators would
      * have be caught at the compile time).
-     * 
+     *
      * @return boolean flag to indicate if there is more input to be processed
      * @throws IOException
      * @throws InterruptedException
@@ -200,7 +201,7 @@ public class CubeOperator implements TupleOperator
 
     /**
      * Process input tuples for cubing WITH inner dimensions.
-     * 
+     *
      * @return boolean flag to indicate if there is more input to be processed
      * @return
      * @throws IOException
@@ -381,6 +382,9 @@ public class CubeOperator implements TupleOperator
                 String[] fields = gsInput[i].split(",");
                 for (String field : fields)
                 {
+                    if (field.equals(""))
+                        continue; // roll up everything TODO: check ROLLUP clause (?)
+
                     if (!dimensionSet.contains(field))
                     {
                         String msg =
@@ -574,7 +578,7 @@ public class CubeOperator implements TupleOperator
 
                     try
                     {
-                        Class<?> cls = Class.forName(type);
+                        Class<?> cls = ClassCache.forName(type);
                         object =
                                 instantiateObject(cls,
                                                   aggregateJson.get("constructorArgs"));

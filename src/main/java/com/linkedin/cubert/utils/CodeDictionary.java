@@ -160,4 +160,10 @@ public class CodeDictionary
         ostream.close();
     }
 
+    @Override
+    public String toString()
+    {
+        return keyToCodeMap == null ? "<null>" : keyToCodeMap.toString();
+    }
+
 }

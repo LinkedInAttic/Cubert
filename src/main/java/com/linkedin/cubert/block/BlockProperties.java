@@ -123,4 +123,19 @@ public final class BlockProperties
         for (BlockProperties parent : parents)
             parent.getAll(key, list);
     }
+
+    @Override
+    public String toString()
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.append("BlockProperties [blockName=")
+               .append(blockName)
+               .append(", schema=")
+               .append(schema)
+               .append(", properties=")
+               .append(properties)
+               .append("]");
+        return builder.toString();
+    }
+
 }

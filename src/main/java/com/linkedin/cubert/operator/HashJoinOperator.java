@@ -45,17 +45,12 @@ public class HashJoinOperator implements TupleOperator
     private Tuple keyTuple;
     private RightTupleList matchedRightTupleList = new RightTupleList(0);
 
-    private SerializedTupleStore mySerializedStore = null;
-
     /*
      * SingleNullTupleList, which is a singleton in the context of operator and contains
      * one all-null right tuple.
      */
     private RightTupleList singleNULLTupleList;
     private final RightTupleList emptyTupleList = new RightTupleList(0);
-
-    private String leftName;
-    private String rightName;
 
     private int[] leftJoinColumnIndex;
     private int[] rightJoinColumnIndex;
@@ -89,8 +84,7 @@ public class HashJoinOperator implements TupleOperator
     private static final String RIGHT_OUTER_JOIN = "RIGHT OUTER";
 
     @Override
-    public void setInput(Map<String, Block> input, JsonNode root, BlockProperties props) throws JsonParseException,
-            JsonMappingException,
+    public void setInput(Map<String, Block> input, JsonNode root, BlockProperties props) throws
             IOException,
             InterruptedException
     {
@@ -100,12 +94,10 @@ public class HashJoinOperator implements TupleOperator
         {
             if (name.equalsIgnoreCase(leftBlockName))
             {
-                leftName = name;
                 leftBlock = input.get(name);
             }
             else
             {
-                rightName = name;
                 rightBlock = input.get(name);
             }
         }
@@ -167,29 +159,39 @@ public class HashJoinOperator implements TupleOperator
 
         output = TupleFactory.getInstance().newTuple(props.getSchema().getNumColumns());
 
-        MemoryStats.print("HASH JOIN OPERATOR before creating hashtable");
         long startTime = System.currentTimeMillis();
+        MemoryStats.print("HASH JOIN OPERATOR before creating hashtable");
+
+        /* Serialize the data and create the Hash Table */
         createHashTable();
-        long duration = System.currentTimeMillis() - startTime;
-        print.f("Hashtable with %d entries creates in %d ms",
-                this.rightBlockHashTable.size(),
-                duration);
+
         MemoryStats.print("HASH JOIN OPERATOR after creating hashtable");
+        long duration = System.currentTimeMillis() - startTime;
+        print.f("HashJoinOperator: createHashTable() for %d entries completed in %d ms",
+                rightBlockHashTable.size(),
+                duration);
+        MemoryStats.printGCStats();
     }
 
     @Override
     public Tuple next() throws IOException,
             InterruptedException
     {
+        final Tuple next = getNextRow();
+
+        /* Increment counter for every row. This count includes the null row for which it is subtracted later on */
         outputCounter++;
-        if (outputCounter % 1000 == 0)
+
+        if ((next == null || outputCounter >= 100000) && PhaseContext.getContext() != null)
         {
-            PhaseContext.getCounter("hashjoinoperator", "outputCounter")
-                        .increment(outputCounter);
+            /* If there is no next tuple decrement the already incremented value */
+            if (next == null) --outputCounter;
+
+            PhaseContext.getCounter("HASH JOIN OPERATOR", "# Output Tuples").increment(outputCounter);
             outputCounter = 0;
         }
 
-        return getNextRow();
+        return next;
     }
 
     private RightTupleList getMatchedRightTupleList(Tuple leftTuple) throws IOException,
@@ -322,18 +324,27 @@ public class HashJoinOperator implements TupleOperator
     private void createHashTable() throws IOException,
             InterruptedException
     {
-        mySerializedStore = null;
-        mySerializedStore =
-                new SerializedTupleStore(rightBlock.getProperties().getSchema(),
-                                         rightBlockColumns);
+        long start, end;
+        start = System.currentTimeMillis();
+        SerializedTupleStore store =
+                new SerializedTupleStore(rightBlock.getProperties().getSchema(), rightBlockColumns);
 
+        int count = 0;
         Tuple t;
-
         while ((t = rightBlock.next()) != null)
         {
-            mySerializedStore.addToStore(t);
+            store.addToStore(t);
+            ++count;
         }
-        rightBlockHashTable = mySerializedStore.getHashTable();
+        end = System.currentTimeMillis();
+        print.f("HashJoinOperator: Serialized %d entries in %d ms", count, (end - start));
+
+        /* Create the Hash Table */
+        rightBlockHashTable = store.getHashTable();
+
+        /* Drop the start offsets. This is to be done AFTER creating the Hash Table since, creation requires random
+         * access to the store. */
+        store.dropIndex();
     }
 
     @SuppressWarnings("serial")

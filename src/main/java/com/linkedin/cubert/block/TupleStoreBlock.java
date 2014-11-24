@@ -48,6 +48,11 @@ public class TupleStoreBlock implements Block
         this.store = store;
         this.props = props;
         this.iterator = store.iterator();
+
+        if (!store.getSchema().equals(props.getSchema()))
+        {
+            throw new RuntimeException("Schema of TupleStore and Block should match!");
+        }
     }
 
     @Override
@@ -84,4 +89,8 @@ public class TupleStoreBlock implements Block
 
     }
 
+    public TupleStore getStore()
+    {
+        return store;
+    }
 }

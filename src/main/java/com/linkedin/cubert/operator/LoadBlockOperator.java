@@ -60,8 +60,7 @@ public class LoadBlockOperator implements BlockOperator
         {
             try
             {
-                Index index =
-                        FileCache.get().getCachedIndex(JsonUtils.getText(json, "index"));
+                Index index = FileCache.getCachedIndex(JsonUtils.getText(json, "index"));
                 boolean inMemory =
                         json.has("inMemory") && json.get("inMemory").getBooleanValue();
                 BlockSerializationType serializationType = index.getSerializationType();
@@ -89,5 +88,13 @@ public class LoadBlockOperator implements BlockOperator
         Block ret = outputBlock;
         outputBlock = null;
         return ret;
+    }
+
+    @Override
+    public PostCondition getPostCondition(Map<String, PostCondition> preConditions,
+                                          JsonNode json) throws PreconditionException
+    {
+        // TODO Auto-generated method stub
+        return null;
     }
 }

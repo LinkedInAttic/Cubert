@@ -254,4 +254,12 @@ public class CollateVectorBlockOperator implements BlockOperator
 
         return miniBlock;
     }
+
+    @Override
+    public PostCondition getPostCondition(Map<String, PostCondition> preConditions,
+                                          JsonNode json) throws PreconditionException
+    {
+        // TODO Auto-generated method stub
+        return null;
+    }
 }

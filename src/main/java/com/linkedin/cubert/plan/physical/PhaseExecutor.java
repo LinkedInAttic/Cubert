@@ -31,6 +31,7 @@ import com.linkedin.cubert.block.BlockSchema;
 import com.linkedin.cubert.block.BufferedTupleOperatorBlock;
 import com.linkedin.cubert.block.TupleOperatorBlock;
 import com.linkedin.cubert.block.TupleStoreBlock;
+import com.linkedin.cubert.functions.builtin.FunctionFactory;
 import com.linkedin.cubert.io.rubix.RubixMemoryBlock;
 import com.linkedin.cubert.operator.BlockOperator;
 import com.linkedin.cubert.operator.OperatorFactory;
@@ -214,8 +215,10 @@ public class PhaseExecutor
             {
                 TupleOperator operator =
                         type == OperatorType.USER_DEFINED_TUPLE_OPERATOR
-                                ? OperatorFactory.getUserDefinedTupleOperator(JsonUtils.getText(operatorJson,
-                                                                                                "class"))
+                                ? (TupleOperator) FunctionFactory.createFunctionObject(JsonUtils.getText(operatorJson,
+                                                                                                         "class"),
+                                                                                       operatorJson.get("constructorArgs"))
+
                                 : OperatorFactory.getTupleOperator(type);
 
                 Map<String, Block> inputBlocks = getInputBlocks(blocks, operatorJson);
@@ -248,8 +251,9 @@ public class PhaseExecutor
             {
                 BlockOperator operator =
                         type == OperatorType.USER_DEFINED_BLOCK_OPERATOR
-                                ? OperatorFactory.getUserDefinedBlockOperator(JsonUtils.getText(operatorJson,
-                                                                                                "class"))
+                                ? (BlockOperator) FunctionFactory.createFunctionObject(JsonUtils.getText(operatorJson,
+                                                                                                         "class"),
+                                                                                       operatorJson.get("constructorArgs"))
                                 : OperatorFactory.getBlockOperator(type);
                 Map<String, Block> inputBlocks = getInputBlocks(blocks, operatorJson);
                 operator.setInput(conf, inputBlocks, operatorJson);

@@ -122,7 +122,7 @@ public class CompactDeserializer<K> implements Deserializer<K>
                 else
                 {
                     int length = writable.get();
-                    if (length > buffer.length)
+                    while (length > buffer.length)
                         buffer = new byte[2 * buffer.length];
 
                     in.read(buffer, 0, length);

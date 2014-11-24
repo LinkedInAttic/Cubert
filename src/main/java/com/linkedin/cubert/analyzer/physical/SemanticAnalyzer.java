@@ -15,6 +15,8 @@ import static com.linkedin.cubert.utils.JsonUtils.asArray;
 import static com.linkedin.cubert.utils.JsonUtils.getText;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -27,7 +29,9 @@ import org.codehaus.jackson.node.ObjectNode;
 
 import com.linkedin.cubert.block.BlockSchema;
 import com.linkedin.cubert.block.ColumnType;
+import com.linkedin.cubert.functions.builtin.FunctionFactory;
 import com.linkedin.cubert.io.rubix.RubixConstants;
+import com.linkedin.cubert.operator.BlockOperator;
 import com.linkedin.cubert.operator.OperatorFactory;
 import com.linkedin.cubert.operator.OperatorType;
 import com.linkedin.cubert.operator.PostCondition;
@@ -102,8 +106,6 @@ public class SemanticAnalyzer extends PhysicalPlanVisitor implements PlanRewrite
     private Node linkedListHead;
     private final Map<String, PostCondition> datasetConditions =
             new HashMap<String, PostCondition>();
-    private final Map<String, PostCondition> dictionaryColumns =
-            new HashMap<String, PostCondition>();
 
     private Node lastShuffleNode;
     private boolean hasErrors = false;
@@ -154,18 +156,6 @@ public class SemanticAnalyzer extends PhysicalPlanVisitor implements PlanRewrite
                 else
                     condition = new PostCondition(schema, null, null);
                 datasetConditions.put(input, condition);
-            }
-        }
-
-        if (json.has("dictionary") && !json.get("dictionary").isNull())
-        {
-            JsonNode dictionaryJson = json.get("dictionary");
-            Iterator<String> it = dictionaryJson.getFieldNames();
-            while (it.hasNext())
-            {
-                String path = it.next();
-                BlockSchema schema = new BlockSchema(dictionaryJson.get(path));
-                dictionaryColumns.put(path, new PostCondition(schema, null, null));
             }
         }
     }
@@ -377,6 +367,14 @@ public class SemanticAnalyzer extends PhysicalPlanVisitor implements PlanRewrite
             return;
 
         PostCondition preCondition = preConditions.values().iterator().next();
+
+        if (json.has("distinctShuffle") && json.get("distinctShuffle").getBooleanValue())
+        {
+            String[] columns = preCondition.getSchema().getColumnNames();
+            JsonNode columnsJson = JsonUtils.createArrayNode(columns);
+            ((ObjectNode) json).put("partitionKeys", columnsJson);
+            ((ObjectNode) json).put("pivotKeys", columnsJson);
+        }
 
         String[] partitionKeys = asArray(json, "partitionKeys");
         String[] pivotKeys = asArray(json, "pivotKeys");
@@ -620,6 +618,13 @@ public class SemanticAnalyzer extends PhysicalPlanVisitor implements PlanRewrite
                         && parent.json.get("inMemory").getBooleanValue())
                     isException = true;
 
+                // Exception 3 (for now): it is okay for parent to have multiple child,
+                // if the other children are USER_DEFINED_BLOCK_OPERATOR
+                if ((json.has("operator") && getText(json, "operator").equals("USER_DEFINED_BLOCK_OPERATOR"))
+                        || (parent.child.json.has("operator") && getText(parent.child.json,
+                                                                         "operator").equals("USER_DEFINED_BLOCK_OPERATOR")))
+                    isException = true;
+
                 if (!isException)
                 {
                     error(json,
@@ -637,32 +642,6 @@ public class SemanticAnalyzer extends PhysicalPlanVisitor implements PlanRewrite
         if (preConditions.size() != inputNames.length)
             return null;
 
-        // special case for ENCODE and DECODE: add the schema of the dictionary columns
-        // as the preconditions
-        if (json.has("operator"))
-        {
-            String operator = getText(json, "operator");
-            if (operator.equals("DICT_ENCODE") || operator.equals("DICT_DECODE"))
-            {
-                if (json.get("dictionary").isTextual())
-                {
-                    String path = getText(json, "dictionary");
-
-                    PostCondition condition = dictionaryColumns.get(path);
-                    if (condition == null)
-                    {
-                        error(json, "Dictionary path [" + path + "] is not recognized");
-                        return null;
-                    }
-                    preConditions.put(path, condition);
-                }
-                else
-                {
-                    // do nothing here as the operator handles the postcondition correctly
-                }
-            }
-        }
-
         return preConditions;
     }
 
@@ -675,9 +654,10 @@ public class SemanticAnalyzer extends PhysicalPlanVisitor implements PlanRewrite
         {
             // TupleOperator operatorObject = OperatorFactory.getTupleOperator(type);
             TupleOperator operatorObject =
-                    type == OperatorType.USER_DEFINED_TUPLE_OPERATOR
-                            ? OperatorFactory.getUserDefinedTupleOperator(JsonUtils.getText(json,
-                                                                                            "class"))
+                    (type == OperatorType.USER_DEFINED_TUPLE_OPERATOR)
+                            ? (TupleOperator) FunctionFactory.createFunctionObject(getText(json,
+                                                                                           "class"),
+                                                                                   json.get("constructorArgs"))
                             : OperatorFactory.getTupleOperator(type);
 
             return operatorObject.getPostCondition(preConditions, json);
@@ -741,6 +721,15 @@ public class SemanticAnalyzer extends PhysicalPlanVisitor implements PlanRewrite
             case LOAD_CACHED_FILE:
             {
                 String path = JsonUtils.encodePath(json.get("path"));
+                try
+                {
+                    path = new URI(path).getPath();
+                }
+                catch (URISyntaxException e)
+                {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
                 PostCondition postCondition = this.datasetConditions.get(path);
                 if (postCondition == null)
                     error(json, "Cannot determine schema of " + path);
@@ -832,6 +821,17 @@ public class SemanticAnalyzer extends PhysicalPlanVisitor implements PlanRewrite
                                          preCondition.getPartitionKeys(),
                                          (combineColumns),
                                          identifierColumns);
+            }
+            case USER_DEFINED_BLOCK_OPERATOR:
+            {
+                BlockOperator operator =
+                        (BlockOperator) FunctionFactory.createFunctionObject(getText(json,
+                                                                                     "class"),
+                                                                             json.get("constructorArgs"));
+                // OperatorFactory.getUserDefinedBlockOperator(getText(json, "class"),
+                // json.get("constructorArgs"));
+                return operator.getPostCondition(preConditions, json);
+
             }
             default:
                 throw new IllegalArgumentException("Operator " + type

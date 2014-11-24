@@ -15,9 +15,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.JobConf;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ObjectNode;
 
@@ -58,8 +55,11 @@ public class ExecutorService
     /* Scheduled Jobs maintain the list of jobs to be executed */
     final List<JobExecutor> scheduledJobs;
 
-    /* The logger thread is a separate thread that monitors the progress of the jobs and reports the status to the user
-     * The thread mechanism is required to report combined status of jobs running in parallel. */
+    /*
+     * The logger thread is a separate thread that monitors the progress of the jobs and
+     * reports the status to the user The thread mechanism is required to report combined
+     * status of jobs running in parallel.
+     */
     final LoggerThread loggerThread;
 
     /* jobsToLog retains the members which are currently running */
@@ -70,7 +70,8 @@ public class ExecutorService
     public ExecutorService(JsonNode json)
     {
         this.json = json;
-        profileMode = json.has("profileMode") && json.get("profileMode").getBooleanValue();
+        profileMode =
+                json.has("profileMode") && json.get("profileMode").getBooleanValue();
 
         setupConf(this.json);
         try
@@ -107,9 +108,9 @@ public class ExecutorService
     }
 
     /**
-     * Public API to execute all the jobs in the program.
-     * The jobs are executed serially or in parallel decided on the ExecutionConfig method isParallelExec
-     *
+     * Public API to execute all the jobs in the program. The jobs are executed serially
+     * or in parallel decided on the ExecutionConfig method isParallelExec
+     * 
      * @throws IOException
      * @throws InterruptedException
      * @throws ClassNotFoundException
@@ -117,10 +118,10 @@ public class ExecutorService
      * @throws IllegalAccessException
      */
     public void execute() throws IOException,
-                                 InterruptedException,
-                                 ClassNotFoundException,
-                                 InstantiationException,
-                                 IllegalAccessException
+            InterruptedException,
+            ClassNotFoundException,
+            InstantiationException,
+            IllegalAccessException
     {
         try
         {
@@ -151,7 +152,7 @@ public class ExecutorService
 
     /**
      * Public API to execute a single job in the program.
-     *
+     * 
      * @throws IOException
      * @throws InterruptedException
      * @throws ClassNotFoundException
@@ -178,10 +179,10 @@ public class ExecutorService
     }
 
     private void executeJobId(int jobId) throws IOException,
-                                          InterruptedException,
-                                          ClassNotFoundException,
-                                          InstantiationException,
-                                          IllegalAccessException
+            InterruptedException,
+            ClassNotFoundException,
+            InstantiationException,
+            IllegalAccessException
     {
         JsonNode job = json.get("jobs").get(jobId);
         JobExecutor jobExecutor = createJobExecutor(job);
@@ -197,9 +198,9 @@ public class ExecutorService
     }
 
     JobExecutor createJobExecutor(JsonNode job) throws IOException,
-                                                       ClassNotFoundException,
-                                                       InstantiationException,
-                                                       IllegalAccessException
+            ClassNotFoundException,
+            InstantiationException,
+            IllegalAccessException
     {
         print.f("Executing job [%s]....", JsonUtils.getText(job, "name"));
 
@@ -212,7 +213,8 @@ public class ExecutorService
             }
             else
             {
-                throw new IllegalArgumentException("Job type " + jobType + " is not recognized");
+                throw new IllegalArgumentException("Job type " + jobType
+                        + " is not recognized");
             }
         }
         else
@@ -247,41 +249,7 @@ public class ExecutorService
     {
         if (json.has("onCompletion") && !json.get("onCompletion").isNull())
         {
-            JsonNode tasks = json.get("onCompletion");
-            FileSystem fs = FileSystem.get(new JobConf());
-
-            for (int i = 0; i < tasks.size(); i++)
-            {
-                try
-                {
-                    final JsonNode task = tasks.get(i);
-                    final String taskType = JsonUtils.getText(task, "type");
-                    final String[] paths = JsonUtils.asArray(task, "paths");
-
-                    if (taskType.equals("rm"))
-                    {
-                        for (String path : paths)
-                        {
-                            System.out.println("Deleting path " + path + "...");
-                            fs.delete(new Path(path), true);
-                        }
-                    }
-                    else if (taskType.equals("mv"))
-                    {
-                        System.out.println("Moving " + paths[0] + " to " + paths[1]
-                                + "...");
-
-                        final Path from = new Path(paths[0]);
-                        final Path to = new Path(paths[1]);
-                        fs.delete(to, true);
-                        fs.rename(from, to);
-                    }
-                }
-                catch (IOException e)
-                {
-                    System.err.println("ERROR: " + e.getMessage());
-                }
-            }
+            CompletionTasks.doCompletionTasks(json.get("onCompletion"));
         }
     }
 }

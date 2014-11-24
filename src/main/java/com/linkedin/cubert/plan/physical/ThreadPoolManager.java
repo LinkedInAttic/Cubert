@@ -208,7 +208,7 @@ public class ThreadPoolManager
             if (exceptionThrown)
             {
                 executorService.execState = ExecutionState.FINISHED;
-                System.exit(1);
+                throw new InterruptedException();
             }
         }
     }

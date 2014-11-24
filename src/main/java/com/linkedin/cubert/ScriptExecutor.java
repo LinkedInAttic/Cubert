@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Random;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -52,7 +53,6 @@ import com.linkedin.cubert.analyzer.physical.BlockgenLineageAnalyzer;
 import com.linkedin.cubert.analyzer.physical.CachedFileAnalyzer;
 import com.linkedin.cubert.analyzer.physical.DependencyAnalyzer;
 import com.linkedin.cubert.analyzer.physical.DescribePlan;
-import com.linkedin.cubert.analyzer.physical.DictionaryAnalyzer;
 import com.linkedin.cubert.analyzer.physical.OverwriteAnalyzer;
 import com.linkedin.cubert.analyzer.physical.PhysicalPlanWalker;
 import com.linkedin.cubert.analyzer.physical.PlanRewriteException;
@@ -76,6 +76,35 @@ public class ScriptExecutor
     private String program;
     private JsonNode physicalPlan;
     private boolean debugMode = false;
+
+    private String azkabanJobName;
+    private Properties azkabanProperties;
+
+    public ScriptExecutor(String name, Properties props)
+    {
+        this.azkabanJobName = name;
+        this.azkabanProperties = props;
+    }
+
+    public void run() throws Exception
+    {
+        String scriptName = azkabanProperties.getProperty("cubert.script");
+        if (scriptName == null)
+            throw new IllegalArgumentException("Cubert script name is not provided.");
+
+        String argsStr = azkabanProperties.getProperty("cubert.args");
+        if (argsStr != null)
+        {
+            // TODO: fix this
+            if (argsStr.contains("\"") || argsStr.contains("'"))
+                throw new IllegalArgumentException("Oops! The parser does not support quotes in the args. Please use -f <params file> for now.");
+
+            scriptName = scriptName + " " + argsStr;
+        }
+
+        String[] args = scriptName.split("\\s+");
+        ScriptExecutor.main(args);
+    }
 
     public ScriptExecutor(String program)
     {
@@ -197,6 +226,7 @@ public class ScriptExecutor
 
         // The macro variables that are not already defined in the props, may be defined
         // as environment variables
+        boolean needCubertTemp = false;
         for (String variable : variables)
         {
             if (!props.containsKey(variable))
@@ -204,7 +234,24 @@ public class ScriptExecutor
                 String value = System.getenv(variable);
                 if (value != null)
                     props.put(variable, value);
+                else if (!needCubertTemp && variable.equals("CUBERT_TEMP"))
+                    needCubertTemp = true;
             }
+        }
+
+        if (needCubertTemp)
+        {
+            Random rand = new Random();
+            long suffix = 1;
+            while (suffix < 100000L)
+                suffix = Math.abs(rand.nextLong());
+
+            String cubertTemp = String.format("CUBERT_TEMP__%d", suffix);
+
+            System.out.println("variable CUBERT_TEMP not defined. Using value '"
+                    + cubertTemp + "'");
+
+            props.put("CUBERT_TEMP", cubertTemp);
         }
 
         // Substitute the base variable
@@ -242,7 +289,8 @@ public class ScriptExecutor
         program = sb.toString();
     }
 
-    public void compile() throws IOException
+    public void compile() throws IOException,
+            java.text.ParseException
     {
         physicalPlan = PhysicalParser.parseProgram(getProgram());
     }
@@ -262,7 +310,6 @@ public class ScriptExecutor
         rewriters.add(CachedFileAnalyzer.class);
         rewriters.add(DependencyAnalyzer.class);
         rewriters.add(OverwriteAnalyzer.class);
-        rewriters.add(DictionaryAnalyzer.class);
         rewriters.add(BlockgenLineageAnalyzer.class);
         rewriters.add(SemanticAnalyzer.class);
 
@@ -491,9 +538,8 @@ public class ScriptExecutor
 
                 if (matchedJobs.isEmpty())
                 {
-                    System.err.println("ERROR: There is no job that matches [" + jobToRun
-                            + "]");
-                    System.exit(1);
+                    throw new IllegalStateException("ERROR: There is no job that matches ["
+                            + jobToRun + "]");
                 }
 
                 if (matchedJobs.size() > 1)
@@ -504,7 +550,7 @@ public class ScriptExecutor
                         System.err.println(String.format("\t[%d] %s",
                                                          entry.getKey(),
                                                          entry.getValue()));
-                    System.exit(1);
+                    throw new IllegalStateException();
                 }
 
                 id = matchedJobs.keySet().iterator().next();

@@ -1,9 +1,9 @@
 /* (c) 2014 LinkedIn Corp. All rights reserved.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use
  * this file except in compliance with the License. You may obtain a copy of the
  * License at  http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software distributed
  * under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
  * CONDITIONS OF ANY KIND, either express or implied.
@@ -13,6 +13,7 @@ package com.linkedin.cubert.utils;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -20,6 +21,7 @@ import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 
 import com.linkedin.cubert.block.BlockSchema;
+import com.linkedin.cubert.block.TupleComparator;
 
 /**
  * A tuple store for keeping PigTuples in memory in the raw format. In contrast to the
@@ -31,18 +33,25 @@ import com.linkedin.cubert.block.BlockSchema;
 
 public class RawTupleStore implements TupleStore
 {
+    private final BlockSchema schema;
     private List<Tuple> tuples;
     private boolean shallowCopy;
 
+    private TupleComparator comparator = null;
+
     public RawTupleStore(BlockSchema schema)
     {
-        this(schema, 1000);
+        this.schema = schema;
+        shallowCopy = schema.allFieldsAllowShallowCopy();
+        tuples = new ArrayList<Tuple>(1000);
     }
 
-    public RawTupleStore(BlockSchema schema, int capacity)
+    public void setSortKeys(String[] comparatorKeys)
     {
-        shallowCopy = schema.allFieldsAllowShallowCopy();
-        tuples = new ArrayList<Tuple>(capacity);
+        if (comparatorKeys != null)
+        {
+            comparator = new TupleComparator(schema, comparatorKeys);
+        }
     }
 
     @Override
@@ -78,5 +87,34 @@ public class RawTupleStore implements TupleStore
     public int getNumTuples()
     {
         return tuples.size();
+    }
+
+    @Override
+    public Tuple getTuple(final int index, Tuple reuse)
+    {
+        return tuples.get(index);
+    }
+
+    @Override
+    public BlockSchema getSchema()
+    {
+        return schema;
+    }
+
+    @Override
+    public int[] getOffsets()
+    {
+        final int[] indexes = new int[tuples.size()];
+        for (int i = 0; i < indexes.length; i++)
+        {
+            indexes[i] = i;
+        }
+        return indexes;
+    }
+
+    @Override
+    public void sort(SortAlgo sa)
+    {
+            sa.sort(tuples, comparator);
     }
 }

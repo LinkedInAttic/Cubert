@@ -11,8 +11,11 @@
 
 package com.linkedin.cubert.utils;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
@@ -30,43 +33,50 @@ import com.linkedin.cubert.plan.physical.CubertStrings;
  */
 public class FileCache
 {
-    private final Path[] cachedFiles;
-    private static FileCache fileCache;
-    private Configuration conf;
+    private static Path[] cachedFiles;
+    private static Configuration conf;
 
-    public FileCache(Configuration conf) throws IOException
+    public static void initialize(Configuration conf) throws IOException
     {
-        this.conf = conf;
+        FileCache.conf = conf;
         cachedFiles = DistributedCache.getLocalCacheFiles(conf);
     }
 
-    public static FileCache create(Configuration conf) throws IOException
+    public static String get(String path)
     {
-        fileCache = new FileCache(conf);
-        return fileCache;
-    }
-
-    public static FileCache get()
-    {
-        if (fileCache == null)
+        // first try to load the file using the symbolic link
+        // (note that symbolic link does not work with hadoop 1 in local mode)
+        try
         {
-            throw new RuntimeException("FileCache has not been created yet.");
-        }
-        return fileCache;
-    }
+            URI uri = new URI(path);
+            String fragment = uri.getFragment();
+            if (fragment != null)
+            {
+                File file = new File(fragment);
+                if (file.exists())
+                    return file.toString();
+            }
 
-    public String getCachedFile(String suffix)
-    {
+            // remove the fragment
+            path = uri.getPath();
+        }
+        catch (URISyntaxException e)
+        {
+            // do nothing... fall through to the remaining code
+        }
+
+        // otherwise, try to load from full path
+
         if (cachedFiles == null)
             return null;
 
         for (Path cachedFile : cachedFiles)
         {
-            if (cachedFile.toString().endsWith(suffix))
+            if (cachedFile.toString().endsWith(path))
             {
                 return cachedFile.toString();
             }
-            if (cachedFile.getParent().toString().endsWith(suffix))
+            if (cachedFile.getParent().toString().endsWith(path))
             {
                 return cachedFile.toString();
             }
@@ -75,12 +85,12 @@ public class FileCache
         return null;
     }
 
-    public Index getCachedIndex(String indexName) throws FileNotFoundException,
+    public static Index getCachedIndex(String indexName) throws FileNotFoundException,
             IOException,
             ClassNotFoundException
     {
         String suffix = conf.get(CubertStrings.JSON_CACHE_INDEX_PREFIX + indexName);
-        String indexFile = getCachedFile(suffix);
+        String indexFile = get(suffix + "#" + indexName);
         return (Index) SerializerUtils.deserializeFromFile(indexFile);
     }
 }

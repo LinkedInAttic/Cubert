@@ -34,6 +34,7 @@ import com.linkedin.cubert.operator.PhaseContext;
 import com.linkedin.cubert.operator.TeeOperator;
 import com.linkedin.cubert.utils.FileCache;
 import com.linkedin.cubert.utils.JsonUtils;
+import com.linkedin.cubert.utils.MemoryStats;
 import com.linkedin.cubert.utils.print;
 
 /**
@@ -52,7 +53,7 @@ public class CubertMapper extends Mapper<Object, Object, Object, Object>
         print.f("Mapper init  ----------------------------------");
         Configuration conf = context.getConfiguration();
 
-        FileCache.create(conf);
+        FileCache.initialize(conf);
         PhaseContext.create(context, conf);
 
         ObjectMapper mapper = new ObjectMapper();
@@ -123,21 +124,34 @@ public class CubertMapper extends Mapper<Object, Object, Object, Object>
                               .getBlockWriter();
         writer.configure(outputJson);
 
+
+        final int MIN_DELAY = 15000;
+        int nBlocks = 0;
         long start = System.currentTimeMillis();
+        long curr = start;
         Block outputBlock;
         while ((outputBlock = exec.next()) != null)
         {
             writer.write(outputBlock, commonContext);
-            print.f("Executed operator chain for a block in %d ms",
-                    System.currentTimeMillis() - start);
-            start = System.currentTimeMillis();
+            ++nBlocks;
+            curr = System.currentTimeMillis();
+            if (curr > start + MIN_DELAY)
+            {
+                print.f("Executed operator chain for %d block(s) in %d ms", nBlocks, curr - start);
+                start = System.currentTimeMillis();
+                nBlocks = 0;
+            }
+        }
+        if (nBlocks > 0)
+        {
+            print.f("Executed operator chain for %d block(s) in %d ms", nBlocks, curr - start);
         }
 
         // HACK!! Asking the TeeOperator to close the files that were opened
         TeeOperator.closeFiles();
 
         print.f("Mapper complete ----------------------------------");
-
+        MemoryStats.printGCStats();
     }
 
     public static final class MapContext implements CommonContext

@@ -61,7 +61,7 @@ public class ValidateOperator implements TupleOperator
         try
         {
             String indexName = JsonUtils.getText(json, "index");
-            index = FileCache.get().getCachedIndex(indexName);
+            index = FileCache.getCachedIndex(indexName);
         }
         catch (ClassNotFoundException e)
         {
