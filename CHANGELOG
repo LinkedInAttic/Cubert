@@ -1,0 +1,19 @@
+Cubert v0.2.0
+---------------
+[NEW] Can use user-provided implementation of sort algorithm (the default is java.utils.Collections.sort)
+[NEW] Added support for user-defined storage formats
+[NEW] Added support for running Cubert script as Azkaban job
+[NEW] User defined operators can request to cache files and Rubix file indices
+[NEW] Added DICTINCT shuffle command
+[NEW] Added DICTIONARY shuffle command
+[NEW] Added RANK operator
+[NEW] Added support for CUBE combo level and rollup
+[CHANGE] Inline script dictionary is now created using keyword CREATE DICTIONARY
+[CHANGE] ENCODE and DECODE operators now require the columns that are to be encoded/decoded
+[CHANGE] Package org.apache.pig.piggybank (for AVRO storage) is renamed to com.linkedin.cubert.pig.piggybank to avoid name conflicts
+[PERFORMANCE] Caching classname (string) -> Class mapping to improve runtime performance
+[PERFORMANCE] New implementation of hash table (for HASH-JOIN operator) that is memory efficient
+[BUG] Fixed bug where cached file analyzer was incorrectly treating the inline dictionary as path to a file
+[BUG] TEXT output format was ignoring the field separator value
+[BUG] User defined aggregation functions with default constructors were not instantiated correctly
+[BUG] Fixed issues where distributed cached files were not handled properly in hadoop 2
