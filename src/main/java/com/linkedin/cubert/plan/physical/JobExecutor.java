@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -29,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.codehaus.jackson.JsonNode;
@@ -46,11 +48,12 @@ import com.linkedin.cubert.io.StorageFactory;
 import com.linkedin.cubert.utils.ExecutionConfig;
 import com.linkedin.cubert.utils.FileSystemUtils;
 import com.linkedin.cubert.utils.JsonUtils;
+import com.linkedin.cubert.utils.CubertMD;
 import com.linkedin.cubert.utils.print;
 
 /**
  * Parses and executes the physical plan of a single Map-Reduce job.
- * 
+ *
  * @author Maneesh Varshney
  */
 public class JobExecutor
@@ -183,10 +186,14 @@ public class JobExecutor
         int numReducers = root.get("reducers").getIntValue();
         job.setNumReduceTasks(numReducers);
 
+        boolean foundPaths = false;
         for (JsonNode map : root.path("map"))
         {
-            setInput(((ObjectNode) map).get("input"));
+            foundPaths |= setInput(((ObjectNode) map).get("input"));
         }
+        if (!foundPaths)
+          throw new IOException("Cannot find any input paths for job");
+
         setOutput();
         conf.set(CubertStrings.JSON_OUTPUT, root.get("output").toString());
         if (root.has("metadata"))
@@ -195,7 +202,7 @@ public class JobExecutor
         conf.set(CubertStrings.JSON_MAP_OPERATOR_LIST, root.get("map").toString());
         job.setMapperClass(CubertMapper.class);
 
-        if (root.has("shuffle") && !root.get("shuffle").isNull())
+        if (hasReducePhase())
         {
             setShuffle();
             conf.set(CubertStrings.JSON_SHUFFLE, root.get("shuffle").toString());
@@ -211,6 +218,11 @@ public class JobExecutor
 
         if (conf.get("mapreduce.output.fileoutputformat.compress") == null)
             conf.set("mapreduce.output.fileoutputformat.compress", "true");
+    }
+
+    public boolean hasReducePhase()
+    {
+        return root.has("shuffle") && !root.get("shuffle").isNull();
     }
 
     private void serializeExecutionConfig() throws IOException
@@ -251,8 +263,36 @@ public class JobExecutor
 
     private void execJobCommand(JsonNode jsonNode)
     {
+     // TODO Auto-generated method stub
+      String[] commandSplits = jsonNode.getTextValue().split("\\s+");
+      String command = commandSplits[0];
+
+      try {
+        if (command.equalsIgnoreCase("METAFILE")){
+          String[] metadataArgs = Arrays.copyOfRange(commandSplits, 1, commandSplits.length);
+          CubertMD.execCommand(metadataArgs);
+        }
+        else if (command.equalsIgnoreCase("HDFS")){
+          execHdfsCommand(commandSplits[1], Arrays.copyOfRange(commandSplits, 2, commandSplits.length));
+        }
+
+      }
+      catch (IOException e){
+        throw new RuntimeException("Job command failed due to " + e.toString());
+      }
 
     }
+
+    private void execHdfsCommand(String cmd, String[] args) throws IOException{
+       FileSystem fs = FileSystem.get(conf);
+       if (cmd.equalsIgnoreCase("RENAME"))
+         fs.rename(new Path(args[0]), new Path(args[1]));
+       else if (cmd.equalsIgnoreCase("DELETE"))
+         fs.delete(new Path(args[0]));
+
+    }
+
+
 
     protected void setJobName()
     {
@@ -328,45 +368,50 @@ public class JobExecutor
         if (!root.has("cacheIndex"))
             return;
 
+        HashMap<String, Path> cachedIndexFiles = new HashMap<String, Path>();
+
+
         for (JsonNode indexNode : root.path("cacheIndex"))
         {
-            // extract the index named by "index" from the location specified in "path";
-            Index indexToCache =
-                    Index.extractFromRelation(conf, getText(indexNode, "path"));
+            final String origPathName = getText(indexNode, "path");
+            final String indexName = JsonUtils.getText(indexNode, "name");
 
-            String indexName = JsonUtils.getText(indexNode, "name");
+            // Reuse index (to be put into distributed cache) if already created.
+            Path indexPath = cachedIndexFiles.get(origPathName);
 
-            Path indexPath = new Path(tmpDir, UUID.randomUUID().toString());
-            SerializerUtils.serializeToFile(conf, indexPath, indexToCache);
+            if (indexPath == null)
+            {
+                // extract the index named by "index" from the location specified in "path";
+                Index indexToCache = Index.extractFromRelation(conf, origPathName);
 
-            DistributedCache.addCacheFile(new URI(indexPath.toString() + "#" + indexName),
-                                          conf);
 
-            // tmpFiles.add(indexPath);
+                indexPath = new Path(tmpDir, UUID.randomUUID().toString());
+                SerializerUtils.serializeToFile(conf, indexPath, indexToCache);
 
-            conf.set(CubertStrings.JSON_CACHE_INDEX_PREFIX + indexName,
-                     indexPath.getName());
+                cachedIndexFiles.put(origPathName, indexPath);
+            }
 
-            print.f("Caching index at path [%s] as [%s]",
-                    getText(indexNode, "path"),
-                    indexPath.toString());
+            DistributedCache.addCacheFile(new URI(indexPath.toString() + "#" + indexName), conf);
+
+            conf.set(CubertStrings.JSON_CACHE_INDEX_PREFIX + indexName, indexPath.getName());
+
+            print.f("Caching index at path [%s] as [%s]", origPathName, indexPath.toString());
         }
 
     }
 
-    protected void setInput(JsonNode input) throws IOException,
+    protected boolean setInput(JsonNode input) throws IOException,
             ClassNotFoundException
     {
         JsonNode params = input.get("params");
         if (params == null)
             params = mapper.createObjectNode();
-
         // RelationType type = RelationType.valueOf(getText(input, "type"));
-        List<Path> paths = FileSystemUtils.getPaths(fs, input.get("path"));
+        List<Path> paths = FileSystemUtils.getPaths(fs, input.get("path"), params);
 
         if (paths.isEmpty())
         {
-            throw new IOException("No input paths are defined");
+          return false;
         }
 
         job.setInputFormatClass(CubertInputFormat.class);
@@ -375,6 +420,7 @@ public class JobExecutor
         confDiff.startDiff();
 
         Storage storage = StorageFactory.get(getText(input, "type"));
+
         storage.prepareInput(job, conf, params, paths);
 
         if (params.has("combined") && Boolean.parseBoolean(getText(params, "combined")))
@@ -394,6 +440,7 @@ public class JobExecutor
         FileInputFormat.setInputPaths(job, paths.toArray(new Path[] {}));
 
         confDiff.endDiff();
+        return true;
     }
 
     protected void setOutput() throws IOException
@@ -419,9 +466,10 @@ public class JobExecutor
 
     protected void setShuffle()
     {
-        job.setPartitionerClass(CubertPartitioner.class);
-
         JsonNode shuffle = get(root, "shuffle");
+
+        setPartitioner(shuffle);
+
         Storage storage = StorageFactory.get(getText(shuffle, "type"));
         storage.prepareOutput(job, conf, null, null, null);
 
@@ -429,6 +477,42 @@ public class JobExecutor
         {
             job.setCombinerClass(CubertCombiner.class);
         }
+    }
+
+    private void setPartitioner(JsonNode shuffle)
+    {
+        Class<? extends Partitioner> partitionerClass = null;
+
+        String mrPartitioner = getConf().get("mapreduce.partitioner.class");
+        if (mrPartitioner != null) {
+            try
+            {
+                partitionerClass = Class.forName(mrPartitioner).asSubclass(Partitioner.class);
+            } catch (ClassNotFoundException e)
+            {
+                throw new RuntimeException(e);
+            }
+
+        } else if (shuffle.has("partitionerClass"))
+        {
+            try
+            {
+                partitionerClass = Class.forName(getText(shuffle, "partitionerClass")).asSubclass(Partitioner.class);
+
+                job.setPartitionerClass(partitionerClass);
+            }
+            catch (ClassNotFoundException e)
+            {
+                throw new RuntimeException(e);
+            }
+        }
+        else
+        {
+            partitionerClass = CubertPartitioner.class;
+        }
+
+        print.f("Setting partitioner: " + partitionerClass.getName());
+        job.setPartitionerClass(partitionerClass);
     }
 
     protected void setNumReducers(int numReducers)
@@ -456,7 +540,7 @@ public class JobExecutor
             prepareTeePaths(mapNode.get("operators"));
         }
 
-        if (root.has("shuffle") && !root.get("shuffle").isNull())
+        if (hasReducePhase())
         {
             prepareTeePaths(root.get("reduce"));
         }

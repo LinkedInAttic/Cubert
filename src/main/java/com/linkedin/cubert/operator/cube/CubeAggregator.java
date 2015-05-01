@@ -75,6 +75,12 @@ public interface CubeAggregator
     void allocate(int size);
 
     /**
+     * Clear the internal contents. This is called when the hash table is flushed, and built again with
+     * more data.
+     */
+    void clear();
+
+    /**
      * Handles the current input tuple. This aggregator is expected to retrieve the
      * relevant fields from the input tuple.
      * 

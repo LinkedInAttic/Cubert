@@ -61,6 +61,46 @@ public class DataGenerator
         return null;
     }
 
+    public int[] randomInts(int size)
+    {
+        int[] ints = new int[size];
+        for (int i = 0; i < size; ++i)
+        {
+            ints[i] = (Integer) randomData(DataType.INT);
+        }
+        return ints;
+    }
+
+    public long[] randomLongs(int size)
+    {
+        long[] longs = new long[size];
+        for (int i = 0; i < size; ++i)
+        {
+            longs[i] = (Long) randomData(DataType.LONG);
+        }
+        return longs;
+    }
+
+    public double[] randomDoubles(int size)
+    {
+        double[] doubles = new double[size];
+        for (int i = 0; i < size; ++i)
+        {
+            doubles[i] = (Double) randomData(DataType.DOUBLE);
+        }
+        return doubles;
+    }
+
+    public String[] randomStrings(int size)
+    {
+        String[] strings = new String[size];
+        for (int i = 0; i < size; ++i)
+        {
+            strings[i] = (String) randomData(DataType.STRING);
+        }
+        return strings;
+    }
+
     public String nextString()
     {
         final int length = MIN_STRING_LENGTH + random.nextInt(MAX_STRING_LENGTH - MIN_STRING_LENGTH);

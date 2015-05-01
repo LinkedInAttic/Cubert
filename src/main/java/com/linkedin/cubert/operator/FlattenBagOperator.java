@@ -172,12 +172,25 @@ public class FlattenBagOperator implements TupleOperator
             if (flattenColumnNameSet.contains(colName))
             {
                 BlockSchema columnSchema = ct.getColumnSchema();
+
+                // handle nested tuple schema for bags. [BAG [TUPLE [x, y]]]
+                ColumnType[] ctypes = columnSchema.getColumnTypes();
+                int colid = inputSchema.getIndex(colName);
+                FlattenType ftype = flattenPositions.get(colid);
+                if (isFlattenTuple(ftype) && isFlattenBag(ftype)){
+                  // Unnest the tuple schema into columnSchema.
+                  if (ctypes.length == 1 && ctypes[0].getType() == DataType.TUPLE)
+                    columnSchema = ctypes[0].getColumnSchema();
+                }
+
                 List<ColumnType> outputColTypeDef = outputColumnTypeMap.get(colName);
                 if (outputColTypeDef != null && !outputColTypeDef.isEmpty())
                 {
+                    if (columnSchema == null || columnSchema.getColumnTypes() == null)
+                      throw new RuntimeException("invalid schema for column = " + colName + " columnSchema = " + columnSchema);
                     if (outputColTypeDef.size() != columnSchema.getColumnTypes().length)
                         throw new RuntimeException("Output column specification does not match number of input fields for "
-                                + colName);
+                                                   + colName + " outputColTypeDef size = " + outputColTypeDef.size() + " columnSchema = " + columnSchema);
                     colTypeList.addAll(outputColTypeDef);
                 }
                 else

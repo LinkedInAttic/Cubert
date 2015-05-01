@@ -105,6 +105,8 @@ import com.linkedin.cubert.operator.aggregate.AggregationFunctions;
 import com.linkedin.cubert.utils.CommonUtils;
 import com.linkedin.cubert.utils.JsonUtils;
 
+import static com.linkedin.cubert.antlr4.CubertPhysicalParser.*;
+
 /**
  * This class provides an empty implementation of {@link CubertPhysicalListener}, which
  * can be extended to create a listener which only needs to handle a subset of the
@@ -269,12 +271,12 @@ public class PhysicalParser
         private int multipassIndex = 0;
 
         @Override
-        public void enterProgramName(@NotNull CubertPhysicalParser.ProgramNameContext ctx)
+        public void enterProgramName(@NotNull ProgramNameContext ctx)
         {
         }
 
         @Override
-        public void enterProgram(@NotNull CubertPhysicalParser.ProgramContext ctx)
+        public void enterProgram(@NotNull ProgramContext ctx)
         {
             this.programNode = objMapper.createObjectNode();
             this.hadoopConfNode = objMapper.createObjectNode();
@@ -282,20 +284,20 @@ public class PhysicalParser
         }
 
         @Override
-        public void exitProgramName(@NotNull CubertPhysicalParser.ProgramNameContext ctx)
+        public void exitProgramName(@NotNull ProgramNameContext ctx)
         {
             this.programNode.put("program",
                                  CommonUtils.stripQuotes(ctx.STRING().getText()));
         }
 
-        public void exitProgram(@NotNull CubertPhysicalParser.ProgramContext ctx)
+        public void exitProgram(@NotNull ProgramContext ctx)
         {
             this.programNode.put("jobs", jobsNode);
 
         }
 
         @Override
-        public void exitSetCommand(@NotNull CubertPhysicalParser.SetCommandContext ctx)
+        public void exitSetCommand(@NotNull SetCommandContext ctx)
         {
             String propName = ctx.uri().getText();
 
@@ -309,29 +311,44 @@ public class PhysicalParser
 
             if (propName.equalsIgnoreCase("overwrite"))
                 overwrite = Boolean.parseBoolean(propValue);
-            hadoopConfNode.put(propName, propValue);
+
+            if (mapReduceJobNode == null)
+            {
+                hadoopConfNode.put(propName, propValue);
+            }
+            else
+            {
+                ObjectNode confNode = (ObjectNode) mapReduceJobNode.get("hadoopConf");
+                if (confNode == null)
+                {
+                    confNode = objMapper.createObjectNode();
+                    mapReduceJobNode.put("hadoopConf", confNode);
+                }
+                confNode.put(propName, propValue);
+            }
+
         }
 
         @Override
-        public void enterRegisterCommand(@NotNull CubertPhysicalParser.RegisterCommandContext ctx)
+        public void enterRegisterCommand(@NotNull RegisterCommandContext ctx)
         {
         }
 
         @Override
-        public void exitRegisterCommand(@NotNull CubertPhysicalParser.RegisterCommandContext ctx)
+        public void exitRegisterCommand(@NotNull RegisterCommandContext ctx)
         {
 
             this.libjarsNode.add(cleanPath(ctx.path()));
         }
 
         @Override
-        public void enterHeaderSection(@NotNull CubertPhysicalParser.HeaderSectionContext ctx)
+        public void enterHeaderSection(@NotNull HeaderSectionContext ctx)
         {
 
         }
 
         @Override
-        public void exitHeaderSection(@NotNull CubertPhysicalParser.HeaderSectionContext ctx)
+        public void exitHeaderSection(@NotNull HeaderSectionContext ctx)
         {
             this.programNode.put("hadoopConf", hadoopConfNode);
             this.programNode.put("libjars", libjarsNode);
@@ -340,13 +357,13 @@ public class PhysicalParser
         }
 
         @Override
-        public void enterInputCommand(@NotNull CubertPhysicalParser.InputCommandContext ctx)
+        public void enterInputCommand(@NotNull InputCommandContext ctx)
         {
             // this.inputCommandNode = objMapper.createObjectNode();
         }
 
         @Override
-        public void exitInputCommand(@NotNull CubertPhysicalParser.InputCommandContext ctx)
+        public void exitInputCommand(@NotNull InputCommandContext ctx)
         {
             ObjectNode inputNode = objMapper.createObjectNode();
             addLine(ctx, inputNode);
@@ -400,13 +417,13 @@ public class PhysicalParser
         }
 
         @Override
-        public void enterOutputCommand(@NotNull CubertPhysicalParser.OutputCommandContext ctx)
+        public void enterOutputCommand(@NotNull OutputCommandContext ctx)
         {
             this.outputCommandNode = objMapper.createObjectNode();
         }
 
         @Override
-        public void exitOutputCommand(@NotNull CubertPhysicalParser.OutputCommandContext ctx)
+        public void exitOutputCommand(@NotNull OutputCommandContext ctx)
         {
             outputCommandNode.put("name", ctx.ID().get(0).getText());
             outputCommandNode.put("path", cleanPath(ctx.path()));
@@ -434,7 +451,7 @@ public class PhysicalParser
         }
 
         @Override
-        public void exitEncodeOperator(@NotNull CubertPhysicalParser.EncodeOperatorContext ctx)
+        public void exitEncodeOperator(@NotNull EncodeOperatorContext ctx)
         {
             operatorNode.put("operator", "DICT_ENCODE");
             operatorNode.put("input", ctx.ID(0).getText());
@@ -469,14 +486,14 @@ public class PhysicalParser
         }
 
         @Override
-        public void exitOperatorCommandLhs(@NotNull CubertPhysicalParser.OperatorCommandLhsContext ctx)
+        public void exitOperatorCommandLhs(@NotNull OperatorCommandLhsContext ctx)
         {
 
             this.operatorCommandLhs = new String(ctx.getText());
         }
 
         @Override
-        public void exitDecodeOperator(@NotNull CubertPhysicalParser.DecodeOperatorContext ctx)
+        public void exitDecodeOperator(@NotNull DecodeOperatorContext ctx)
         {
             operatorNode.put("operator", "DICT_DECODE");
             operatorNode.put("input", ctx.ID(0).getText());
@@ -506,7 +523,7 @@ public class PhysicalParser
         }
 
         @Override
-        public void exitLoadBlockOperator(@NotNull CubertPhysicalParser.LoadBlockOperatorContext ctx)
+        public void exitLoadBlockOperator(@NotNull LoadBlockOperatorContext ctx)
         {
             String indexName = generateIndexName();
             String path = cleanPath(ctx.path());
@@ -525,7 +542,7 @@ public class PhysicalParser
         }
 
         @Override
-        public void exitJoinOperator(@NotNull CubertPhysicalParser.JoinOperatorContext ctx)
+        public void exitJoinOperator(@NotNull JoinOperatorContext ctx)
         {
             operatorNode.put("operator", "JOIN");
             ArrayNode inputListNode = objMapper.createArrayNode();
@@ -551,7 +568,7 @@ public class PhysicalParser
         }
 
         @Override
-        public void exitHashJoinOperator(@NotNull CubertPhysicalParser.HashJoinOperatorContext ctx)
+        public void exitHashJoinOperator(@NotNull HashJoinOperatorContext ctx)
         {
             operatorNode.put("operator", "HASHJOIN");
             ArrayNode inputListNode = objMapper.createArrayNode();
@@ -569,14 +586,14 @@ public class PhysicalParser
         }
 
         @Override
-        public void enterMapCommands(@NotNull CubertPhysicalParser.MapCommandsContext ctx)
+        public void enterMapCommands(@NotNull MapCommandsContext ctx)
         {
             this.mapCommandsNode = objMapper.createObjectNode();
             this.operatorCommandsList = new ArrayList<ObjectNode>();
         }
 
         @Override
-        public void exitMapCommands(@NotNull CubertPhysicalParser.MapCommandsContext ctx)
+        public void exitMapCommands(@NotNull MapCommandsContext ctx)
         {
             ArrayNode operators = objMapper.createArrayNode();
             for (ObjectNode opNode : operatorCommandsList)
@@ -588,7 +605,7 @@ public class PhysicalParser
         }
 
         @Override
-        public void enterReduceCommands(@NotNull CubertPhysicalParser.ReduceCommandsContext ctx)
+        public void enterReduceCommands(@NotNull ReduceCommandsContext ctx)
         {
             this.reduceCommandsNode = objMapper.createArrayNode();
             this.operatorCommandsList = new ArrayList<ObjectNode>();
@@ -596,14 +613,14 @@ public class PhysicalParser
         }
 
         @Override
-        public void exitReduceCommands(@NotNull CubertPhysicalParser.ReduceCommandsContext ctx)
+        public void exitReduceCommands(@NotNull ReduceCommandsContext ctx)
         {
             for (ObjectNode opNode : this.operatorCommandsList)
                 this.reduceCommandsNode.add(opNode);
         }
 
         @Override
-        public void exitShuffleCommand(@NotNull CubertPhysicalParser.ShuffleCommandContext ctx)
+        public void exitShuffleCommand(@NotNull ShuffleCommandContext ctx)
         {
             this.shuffleCommandNode = objMapper.createObjectNode();
 
@@ -628,13 +645,13 @@ public class PhysicalParser
         }
 
         @Override
-        public void enterOperatorCommand(@NotNull CubertPhysicalParser.OperatorCommandContext ctx)
+        public void enterOperatorCommand(@NotNull OperatorCommandContext ctx)
         {
             this.operatorNode = objMapper.createObjectNode();
         }
 
         @Override
-        public void exitOperatorCommand(@NotNull CubertPhysicalParser.OperatorCommandContext ctx)
+        public void exitOperatorCommand(@NotNull OperatorCommandContext ctx)
         {
             if (this.operatorNode.size() > 0)
             {
@@ -649,25 +666,25 @@ public class PhysicalParser
         }
 
         @Override
-        public void enterMultipassGroup(@NotNull CubertPhysicalParser.MultipassGroupContext ctx)
+        public void enterMultipassGroup(@NotNull MultipassGroupContext ctx)
         {
             insideMultipassGroup = true;
         }
 
         @Override
-        public void exitMultipassGroup(@NotNull CubertPhysicalParser.MultipassGroupContext ctx)
+        public void exitMultipassGroup(@NotNull MultipassGroupContext ctx)
         {
             insideMultipassGroup = false;
         }
 
         @Override
-        public void exitSinglePassGroup(@NotNull CubertPhysicalParser.SinglePassGroupContext ctx)
+        public void exitSinglePassGroup(@NotNull SinglePassGroupContext ctx)
         {
             multipassIndex++;
         }
 
         @Override
-        public void exitGroupByOperator(@NotNull CubertPhysicalParser.GroupByOperatorContext ctx)
+        public void exitGroupByOperator(@NotNull GroupByOperatorContext ctx)
         {
             operatorNode.put("operator", "GROUP_BY");
             operatorNode.put("input", ctx.ID().getText());
@@ -749,7 +766,7 @@ public class PhysicalParser
         }
 
         @Override
-        public void exitGenerateOperator(@NotNull CubertPhysicalParser.GenerateOperatorContext ctx)
+        public void exitGenerateOperator(@NotNull GenerateOperatorContext ctx)
         {
             operatorNode.put("operator", "GENERATE");
             operatorNode.put("input", ctx.ID().getText());
@@ -760,7 +777,7 @@ public class PhysicalParser
         }
 
         @Override
-        public void exitFilterOperator(@NotNull CubertPhysicalParser.FilterOperatorContext ctx)
+        public void exitFilterOperator(@NotNull FilterOperatorContext ctx)
         {
             operatorNode.put("operator", "FILTER");
             operatorNode.put("input", ctx.ID().getText());
@@ -826,7 +843,7 @@ public class PhysicalParser
         }
 
         @Override
-        public void exitLimitOperator(@NotNull CubertPhysicalParser.LimitOperatorContext ctx)
+        public void exitLimitOperator(@NotNull LimitOperatorContext ctx)
         {
             operatorNode.put("operator", "LIMIT");
             operatorNode.put("input", ctx.ID().getText());
@@ -835,7 +852,7 @@ public class PhysicalParser
         }
 
         @Override
-        public void exitDistinctOperator(@NotNull CubertPhysicalParser.DistinctOperatorContext ctx)
+        public void exitDistinctOperator(@NotNull DistinctOperatorContext ctx)
         {
             operatorNode.put("operator", "DISTINCT");
             operatorNode.put("input", ctx.ID().getText());
@@ -843,7 +860,7 @@ public class PhysicalParser
         }
 
         @Override
-        public void enterMapReduceJob(@NotNull CubertPhysicalParser.MapReduceJobContext ctx)
+        public void enterMapReduceJob(@NotNull MapReduceJobContext ctx)
         {
             this.mapReduceJobNode = objMapper.createObjectNode();
             this.mapReduceJobNode.put("pigudfs", objMapper.createObjectNode());
@@ -856,7 +873,7 @@ public class PhysicalParser
         }
 
         @Override
-        public void exitMapReduceJob(@NotNull CubertPhysicalParser.MapReduceJobContext ctx)
+        public void exitMapReduceJob(@NotNull MapReduceJobContext ctx)
         {
             mapReduceJobNode.put("name", CommonUtils.stripQuotes(ctx.STRING().getText()));
 
@@ -894,7 +911,7 @@ public class PhysicalParser
         }
 
         @Override
-        public void exitDuplicateOperator(@NotNull CubertPhysicalParser.DuplicateOperatorContext ctx)
+        public void exitDuplicateOperator(@NotNull DuplicateOperatorContext ctx)
         {
             operatorNode.put("operator", "DUPLICATE");
             operatorNode.put("input", ctx.ID(0).getText());
@@ -907,7 +924,7 @@ public class PhysicalParser
         }
 
         @Override
-        public void exitValidateOperator(@NotNull CubertPhysicalParser.ValidateOperatorContext ctx)
+        public void exitValidateOperator(@NotNull ValidateOperatorContext ctx)
         {
             super.exitValidateOperator(ctx);
             operatorNode.put("operator", "VALIDATE");
@@ -1441,7 +1458,7 @@ public class PhysicalParser
         }
 
         @Override
-        public void exitFunctionDeclaration(@NotNull CubertPhysicalParser.FunctionDeclarationContext ctx)
+        public void exitFunctionDeclaration(@NotNull FunctionDeclarationContext ctx)
         {
             List<Object> ctorArgs = new ArrayList<Object>();
 
@@ -1457,7 +1474,7 @@ public class PhysicalParser
                     else if (cectx.FLOAT() != null)
                         ctorArgs.add(Float.parseFloat(cectx.FLOAT().getText()));
                     else if (cectx.STRING() != null)
-                        ctorArgs.add(CommonUtils.stripQuotes(cectx.STRING().getText()));
+                        ctorArgs.add(CommonUtils.stripQuotes(cectx.STRING().getText()).replaceAll("\\\\\\\"", "\""));
                 }
             }
 
@@ -1512,6 +1529,7 @@ public class PhysicalParser
             operatorNode.put("output", operatorCommandLhs);
             operatorNode.put("path", cleanPath(ctx.path()));
             operatorNode.put("type", ctx.ID(1).getText());
+            operatorNode.put("passthrough", ctx.split == null);
 
             ObjectNode paramsNode = objMapper.createObjectNode();
             if (ctx.params() != null)
@@ -1538,7 +1556,7 @@ public class PhysicalParser
         }
 
         @Override
-        public void exitSortOperator(@NotNull CubertPhysicalParser.SortOperatorContext ctx)
+        public void exitSortOperator(@NotNull SortOperatorContext ctx)
         {
             operatorNode.put("operator", "SORT");
             operatorNode.put("output", operatorCommandLhs);
@@ -1574,15 +1592,22 @@ public class PhysicalParser
         {
             operatorNode.put("operator", "PIVOT_BLOCK");
             operatorNode.put("output", operatorCommandLhs);
-            operatorNode.put("input", ctx.ID().getText());
+            operatorNode.put("input", ctx.ID(0).getText());
 
             ArrayNode anode = objMapper.createArrayNode();
             if (ctx.columns() != null)
             {
                 for (TerminalNode id : ctx.columns().ID())
                     anode.add(id.getText());
+
+                operatorNode.put("pivotBy", anode);
             }
-            operatorNode.put("pivotBy", anode);
+            else
+            {
+                // this is pivot by row or size
+                operatorNode.put("pivotType", ctx.type.getText());
+                operatorNode.put("pivotValue", ctx.value.getText());
+            }
             operatorNode.put("inMemory", ctx.inmemory != null);
         }
 
@@ -1695,6 +1720,27 @@ public class PhysicalParser
                                                    ctx.ID().getText());
             else
                 System.err.println("Malformed dictionary job");
+
+            addLine(ctx, shuffleCommandNode);
+        }
+
+        @Override
+        public void exitUriShuffleCommand(UriShuffleCommandContext ctx)
+        {
+            ObjectNode paramsNode = objMapper.createObjectNode();
+            if (ctx.params() != null)
+            {
+                for (int i = 0; i < ctx.params().keyval().size(); i++)
+                {
+                    List<TerminalNode> kv = ctx.params().keyval(i).STRING();
+                    paramsNode.put(CommonUtils.stripQuotes(kv.get(0).getText()),
+                                   CommonUtils.stripQuotes(kv.get(1).getText()));
+                }
+            }
+
+            shuffleCommandNode = JsonUtils.createObjectNode("type", ctx.uri().getText(),
+                                                            "name", ctx.ID().getText(),
+                                                            "args", paramsNode);
 
             addLine(ctx, shuffleCommandNode);
         }
@@ -1997,6 +2043,25 @@ public class PhysicalParser
             shuffleCommandNode = this.objMapper.createObjectNode();
             shuffleCommandNode.put("name", ctx.ID().getText());
             shuffleCommandNode.put("type", "DISTINCT");
+
+            addLine(ctx, shuffleCommandNode);
+        }
+
+        @Override
+        public void exitJoinShuffleCommand(@NotNull JoinShuffleCommandContext ctx)
+        {
+            shuffleCommandNode = this.objMapper.createObjectNode();
+            shuffleCommandNode.put("type", "JOIN");
+            shuffleCommandNode.put("name", ctx.ID().getText());
+            shuffleCommandNode.put("joinKeys", createIDListNode(ctx.columns(0).ID()));
+
+            if (ctx.joinType() != null)
+                shuffleCommandNode.put("joinType", ctx.joinType().getText().toUpperCase());
+
+            if (ctx.columns().size() > 1)
+            {
+                shuffleCommandNode.put("partitionKeys", createIDListNode(ctx.columns(1).ID()));
+            }
 
             addLine(ctx, shuffleCommandNode);
         }

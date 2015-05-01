@@ -21,6 +21,7 @@ import static com.linkedin.cubert.utils.JsonUtils.getText;
 import java.io.IOException;
 import java.util.Set;
 
+import com.linkedin.cubert.utils.ClassCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
@@ -89,8 +90,44 @@ public class ShuffleRewriter implements PlanRewriter
             return rewriteDictionary(job);
         else if (type.equals("DISTINCT"))
             return rewriteDistinct(job);
+        else if (type.equals("JOIN"))
+            return rewriteJoin(job);
+        else
+        {
+            try
+            {
+                // get the class
+                Class<?> cls = ClassCache.forName(type);
 
-        throw new RuntimeException("Cannot rewrite shuffle type " + type);
+                // make sure this class implements PlanRewriter interface
+                if (! PlanRewriter.class.isAssignableFrom(cls))
+                    throw new PlanRewriteException("Shuffle rewriter class " + type
+                                                   + " does not implement the PlanRewrite interface");
+
+                // as the user defined shuffle rewriter to rewrite this job
+                return cls.asSubclass(PlanRewriter.class)
+                          .newInstance()
+                          .rewrite(job, namesUsed, false, false);
+            }
+            catch (ClassNotFoundException e)
+            {
+                throw new PlanRewriteException("Shuffle rewriter class " + type + " not found");
+            }
+            catch (InstantiationException e)
+            {
+                throw new PlanRewriteException("Shuffle rewriter class " + type + " cannot be instantiated");
+            }
+            catch (IllegalAccessException e)
+            {
+                throw new PlanRewriteException("Shuffle rewriter class " + type + " has illegal access");
+            }
+            catch (IOException e)
+            {
+                throw new RuntimeException(e);
+            }
+        }
+
+//        throw new PlanRewriteException("Cannot rewrite shuffle type " + type);
     }
 
     private JsonNode rewriteDictionary(JsonNode job)
@@ -362,10 +399,15 @@ public class ShuffleRewriter implements PlanRewriter
             reduce.insert(0, distinct);
         }
 
+        // blockgen by index uses a different partitioner
+        shuffle.put("partitionerClass",
+                    "com.linkedin.cubert.plan.physical.ByIndexPartitioner");
+
         // clean up shuffle
         shuffle.put("type", "SHUFFLE");
         shuffle.put("partitionKeys", createArrayNode("BLOCK_ID"));
         shuffle.put("distinct", isDistinct);
+        shuffle.put("index", indexName);
         shuffle.remove("blockgenType");
         shuffle.remove("relation");
 
@@ -405,6 +447,8 @@ public class ShuffleRewriter implements PlanRewriter
             cube.put("groupingSets", shuffle.get("groupingSets"));
         if (shuffle.has("innerDimensions"))
             cube.put("innerDimensions", shuffle.get("innerDimensions"));
+        if (shuffle.has("hashTableSize"))
+            cube.put("hashTableSize", shuffle.get("hashTableSize"));
         copyLine(shuffle, cube, "[MAP] ");
 
         // add it as the last operator for all mapper
@@ -500,6 +544,80 @@ public class ShuffleRewriter implements PlanRewriter
 
         shuffle.put("type", "SHUFFLE");
         shuffle.put("distinctShuffle", true);
+
+        return newJob;
+    }
+
+    private JsonNode rewriteJoin(JsonNode job)
+    {
+        ObjectNode newJob = (ObjectNode) cloneNode(job);
+        ObjectNode shuffle = (ObjectNode) newJob.get("shuffle");
+        JsonNode joinKeys = shuffle.get("joinKeys");
+        String blockName = getText(shuffle, "name");
+
+        // make sure there are two mappers in the job
+        JsonNode mapJsons = newJob.get("map");
+        if (mapJsons.size() != 2)
+        {
+            throw new RuntimeException("There must be exactly two multimappers for JOIN shuffle command.");
+        }
+
+        // Add the Map side operator in each of the mappers
+        // tag = 1, for the first mapper (non dimensional)
+        // tag = 0, for the second dimensional mapper
+        int tag = 1;
+        for (JsonNode mapJson: mapJsons)
+        {
+            if (!mapJson.has("operators") || mapJson.get("operators").isNull())
+                ((ObjectNode) mapJson).put("operators", mapper.createArrayNode());
+            ArrayNode operators = (ArrayNode) mapJson.get("operators");
+
+            // we need unique references for all blockIndexJoin
+            operators.add(createObjectNode("operator", "REDUCE_JOIN_MAPPER",
+                                           "input", createArrayNode(blockName),
+                                           "output", blockName,
+                                           "joinKeys", joinKeys,
+                                           "tag", tag));
+            tag --;
+        }
+
+        // create the reduce side operator
+        ObjectNode reducerOperator = createObjectNode("operator", "REDUCE_JOIN",
+                                                      "input", createArrayNode(blockName),
+                                                      "output", blockName,
+                                                      "joinKeys", joinKeys);
+        if (shuffle.has("joinType"))
+            reducerOperator.put("joinType", shuffle.get("joinType"));
+
+        // add the reduce side operator
+        if (!newJob.has("reduce") || newJob.get("reduce").isNull())
+        {
+            newJob.put("reduce", mapper.createArrayNode());
+        }
+        ArrayNode reduce = (ArrayNode) newJob.get("reduce");
+        reduce.insert(0, reducerOperator);
+
+        // Fix the shuffle json
+        if (shuffle.has("partitionKeys"))
+        {
+            String[] partitionKeys = JsonUtils.asArray(shuffle, "partitionKeys");
+            String[] joinKeyNames = JsonUtils.asArray(shuffle, "joinKeys");
+            // make sure that partitionKeys is prefix of joinKeys
+            if (!CommonUtils.isPrefix(joinKeyNames, partitionKeys))
+            {
+                throw new RuntimeException("Partition key must be a prefix of join keys");
+            }
+        } else {
+            shuffle.put("partitionKeys", shuffle.get("joinKeys"));
+        }
+        // We will sort on (joinKeys + ___tag)
+        JsonNode pivotKeys = cloneNode(shuffle.get("joinKeys"));
+        ((ArrayNode) pivotKeys).add("___tag");
+
+        shuffle.put("type", "SHUFFLE");
+        shuffle.put("join", true);
+        shuffle.put("pivotKeys", pivotKeys);
+        shuffle.remove("joinKeys");
 
         return newJob;
     }

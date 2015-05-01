@@ -87,6 +87,10 @@ public class OperatorFactory
             return new FlattenBagOperator();
         case VALIDATE:
             return new ValidateOperator();
+        case REDUCE_JOIN_MAPPER:
+            return new RSJoinMapOperator();
+        case REDUCE_JOIN:
+            return new RSJoinOperator();
         default:
             break;
         }

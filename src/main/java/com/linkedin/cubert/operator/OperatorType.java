@@ -50,6 +50,9 @@ public enum OperatorType
     TOP_N(true),
     RANK(true),
 
+    REDUCE_JOIN_MAPPER(true),
+    REDUCE_JOIN(true),
+
     VALIDATE(true),
     FLATTEN(true),
     COLLATE_VECTOR_BLOCK(false),

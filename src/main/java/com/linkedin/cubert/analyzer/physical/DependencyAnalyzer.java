@@ -81,6 +81,7 @@ public class DependencyAnalyzer extends PhysicalPlanVisitor implements PlanRewri
             new ArrayList<JobInputsOutputs>();
     private JobInputsOutputs currentJob;
     private final Configuration conf = new JobConf();
+    private boolean revisit = false;
 
     @Override
     public JsonNode rewrite(JsonNode plan,
@@ -88,6 +89,7 @@ public class DependencyAnalyzer extends PhysicalPlanVisitor implements PlanRewri
                             boolean debugMode,
                             boolean revisit) throws IOException
     {
+        this.revisit = revisit;
         new PhysicalPlanWalker(plan, this).walk();
         return plan;
     }
@@ -209,7 +211,13 @@ public class DependencyAnalyzer extends PhysicalPlanVisitor implements PlanRewri
                 }
                 else
                 {
+                  if (isParentJob(upstreamJobsForInput, jobId))
+                  {
                     upstreamJobs.addAll(upstreamJobsForInput);
+                  }
+                  else
+                    programInputs.add(input);
+                  
                 }
             }
 
@@ -248,10 +256,20 @@ public class DependencyAnalyzer extends PhysicalPlanVisitor implements PlanRewri
                 jsonMap.put(input, dep.jsonMap.get(input));
             }
         }
+
         print.f("[Dependency Analyzer] Program inputs: %s", programInputs);
         // Next, we obtain the schema of the program input files,
         // and put them in the json
-        ObjectNode programInputsJson = mapper.createObjectNode();
+        ObjectNode programInputsJson;
+
+        if (revisit)
+            programInputsJson = (ObjectNode) ((ObjectNode) json).get("input");
+        else
+        {
+            programInputsJson = mapper.createObjectNode();
+            ((ObjectNode) json).put("input", programInputsJson);
+        }
+
         ((ObjectNode) json).put("input", programInputsJson);
         for (String input : programInputs)
         {
@@ -259,6 +277,10 @@ public class DependencyAnalyzer extends PhysicalPlanVisitor implements PlanRewri
             JsonNode inputJson = jsonMap.get(input);
             try
             {
+              // Schema for a data set already present.
+              if (programInputsJson.get(input) != null)
+                    continue;
+
                 PostCondition condition = getPostCondition(input, inputJson, type);
                 ObjectNode node = mapper.createObjectNode();
                 node.put("type", type);
@@ -300,13 +322,21 @@ public class DependencyAnalyzer extends PhysicalPlanVisitor implements PlanRewri
         FileSystem fs = FileSystem.get(conf);
 
         JsonNode pathJson = JsonUtils.decodePath(input);
+        JsonNode params = json.get("params");
         Path path = null;
-
-        List<Path> paths = FileSystemUtils.getPaths(fs, pathJson);
+        List<Path> paths = FileSystemUtils.getPaths(fs, pathJson, true, params);
         path = paths.get(0);
 
         Storage storage = StorageFactory.get(typeStr);
         return storage.getPostCondition(conf, json, path);
 
+    }
+
+    private boolean isParentJob(List<Integer> candidates, int jobId)
+    {
+        for (Integer cand : candidates)
+            if (cand.intValue() < jobId)
+                return true;
+        return false;
     }
 }

@@ -56,27 +56,9 @@ public class AvroStorage implements Storage
                               BlockSchema schema,
                               Path path)
     {
-        Schema avroSchema = null;
-
-        // we can specify the avro schema of the output directly, instead of deriving
-        // it from the BlockSchema
-        // if (json.has("avroSchema"))
-        // {
-        // avroSchema =
-        // new org.apache.avro.Schema.Parser().parse(JsonUtils.getText(json,
-        // "avroSchema"));
-        // }
-        // else
-        // {
-        // schema = new BlockSchema(json.get("schema"));
-        avroSchema = AvroUtils.convertFromBlockSchema("record", schema);
-
+        Schema avroSchema = AvroUtils.convertFromBlockSchema("record", schema);
         conf.set("cubert.avro.output.schema", avroSchema.toString());
-
         job.setOutputFormatClass(PigAvroOutputFormatAdaptor.class);
-        // AvroJob.setOutputKeySchema(job, avroSchema);
-        // AvroJob.setOutputValueSchema(job, Schema.create(Type.NULL));
-        // job.setOutputFormatClass(AvroKeyOutputFormat.class);
     }
 
     @Override

@@ -237,6 +237,9 @@ public class CubeDimensions
 
             switch (dimensionTypes[i])
             {
+            case BOOLEAN:
+                array[dimensionOffsets[i]] = ((Boolean) dim) ? 1 : 0;
+                break;
             case INT:
                 array[dimensionOffsets[i]] = ((Number) dim).intValue();
                 break;
@@ -300,6 +303,9 @@ public class CubeDimensions
             {
                 switch (dimensionTypes[dim])
                 {
+                case BOOLEAN:
+                    outputTuple.set(dimIndex, array[dimensionOffsets[dim]] == 1);
+                    break;
                 case INT:
                     outputTuple.set(dimIndex, array[dimensionOffsets[dim]]);
                     break;

@@ -12,10 +12,11 @@
 package com.linkedin.cubert.utils;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
@@ -34,6 +35,8 @@ import com.linkedin.cubert.plan.physical.CubertStrings;
 public class FileCache
 {
     private static Path[] cachedFiles;
+    private static Map<String, Index> cachedIndexMap = new HashMap<String, Index>(1);
+
     private static Configuration conf;
 
     public static void initialize(Configuration conf) throws IOException
@@ -85,12 +88,21 @@ public class FileCache
         return null;
     }
 
-    public static Index getCachedIndex(String indexName) throws FileNotFoundException,
-            IOException,
-            ClassNotFoundException
+    public static Index getCachedIndex(String indexName) throws IOException, ClassNotFoundException
     {
-        String suffix = conf.get(CubertStrings.JSON_CACHE_INDEX_PREFIX + indexName);
-        String indexFile = get(suffix + "#" + indexName);
-        return (Index) SerializerUtils.deserializeFromFile(indexFile);
+        Index index = cachedIndexMap.get(indexName);
+        if (index != null)
+        {
+            return index;
+        }
+
+        final String prefix = conf.get(CubertStrings.JSON_CACHE_INDEX_PREFIX + indexName);
+        final String indexFile = get(prefix + "#" + indexName);
+        index = (Index) SerializerUtils.deserializeFromFile(indexFile);
+
+        /* Cache the index */
+        cachedIndexMap.put(indexName,  index);
+
+        return index;
     }
 }

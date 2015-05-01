@@ -13,6 +13,7 @@ package com.linkedin.cubert.plan.physical;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.codehaus.jackson.JsonNode;
@@ -93,17 +94,38 @@ public class ExecutorService
 
     private static void setupConf(JsonNode programNode)
     {
+
         // copy the hadoopConf and libjars from global level to each job
-        JsonNode hadoopConf = programNode.get("hadoopConf");
+        JsonNode globalHadoopConf = programNode.get("hadoopConf");
         JsonNode libjars = programNode.get("libjars");
 
-        for (JsonNode job : programNode.path("jobs"))
+        for (JsonNode json : programNode.path("jobs"))
         {
-            ObjectNode onode = (ObjectNode) job;
-            if (hadoopConf != null)
-                onode.put("hadoopConf", hadoopConf);
+            ObjectNode job = (ObjectNode) json;
+
+            // if there isn't local hadoop conf, then use the global conf
+            if (!job.has("hadoopConf"))
+            {
+                job.put("hadoopConf", globalHadoopConf);
+            }
+            else
+            {
+                // if there are local conf properties, then copy only those properties
+                // from global properties that are not already defined at local level
+                ObjectNode localHadoopConf = (ObjectNode) job.get("hadoopConf");
+                Iterator<String> it = globalHadoopConf.getFieldNames();
+                while (it.hasNext())
+                {
+                    String key = it.next();
+                    if (!localHadoopConf.has(key))
+                    {
+                        localHadoopConf.put(key, globalHadoopConf.get(key));
+                    }
+                }
+            }
+
             if (libjars != null)
-                onode.put("libjars", libjars);
+                job.put("libjars", libjars);
         }
     }
 
@@ -241,6 +263,22 @@ public class ExecutorService
         if (scriptStats != null)
         {
             scriptStats.computeAggregate();
+
+            try
+            {
+                for (JobExecutor jobEx : scheduledJobs)
+                {
+                    if (jobEx.getJob().isSuccessful())
+                    {
+                        scriptStats.collectStatistics(jobEx.getJob());
+                    }
+                }
+                scriptStats.printJobStats();
+            }
+            catch (Exception e)
+            {
+                System.err.println("Error in collecting job statistics. Err: " + e.getMessage());
+            }
             scriptStats.printAggregate();
         }
     }

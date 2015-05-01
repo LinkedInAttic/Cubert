@@ -26,6 +26,7 @@ public enum FunctionType
     DIVIDE,
     MOD,
     LSHIFT,
+    RSHIFT,
 
     // Boolean functions
     NE,
@@ -40,6 +41,7 @@ public enum FunctionType
     IS_NULL,
     IS_NOT_NULL,
     IN,
+    IsDistinct,
 
     // type cast functions
     CASTTOLONG,
@@ -59,6 +61,8 @@ public enum FunctionType
     // bag functions
     SIZEOF,
 
+    // Serialize to bytearray
+    TOBYTEARRAY,
     // zero-argument functions
     UNIQUEID,
     SEQNO;

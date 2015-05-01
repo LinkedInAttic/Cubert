@@ -11,7 +11,6 @@
 
 package com.linkedin.cubert.memory;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -37,11 +36,41 @@ import java.util.List;
  * @author Maneesh Varshney
  * 
  */
-public final class IntArrayList
+public final class IntArrayList extends SegmentedArrayList
 {
-    private static final int BatchSize = 1024;
-    private final List<int[]> list = new ArrayList<int[]>();
-    private int size = 0;
+    private final List<int[]> list;
+
+    public IntArrayList()
+    {
+        super();
+        list = (List) super.list;
+    }
+
+    public IntArrayList(int batchSize)
+    {
+        super(batchSize);
+        list = (List) super.list;
+    }
+
+    @Override
+    public void add(Object value)
+    {
+        addInt(((Number) value).intValue());
+    }
+
+    @Override
+    public Object get(int index)
+    {
+        return getInt(index);
+    }
+
+    @Override
+    public int compareIndices(int i1, int i2)
+    {
+        final int l1 = getInt(i1);
+        final int l2 = getInt(i2);
+        return (l1 < l2 ? -1 : (l1 == l2 ? 0 : 1));
+    }
 
     /**
      * Add an integer value to the list.
@@ -49,16 +78,24 @@ public final class IntArrayList
      * @param value
      *            the value to add to list
      */
-    public void add(int value)
+    public void addInt(int value)
     {
-        int batch = size / BatchSize;
+        int batch = size / batchSize;
         while (batch >= list.size())
-            list.add(new int[BatchSize]);
+            list.add(new int[batchSize]);
 
-        int index = size % BatchSize;
+        int index = size % batchSize;
         list.get(batch)[index] = value;
 
         size++;
+    }
+
+    public int getInt(int pointer)
+    {
+        int batch = pointer / batchSize;
+        int index = pointer % batchSize;
+
+        return list.get(batch)[index];
     }
 
     /**
@@ -69,14 +106,6 @@ public final class IntArrayList
     public IntIterator iterator()
     {
         return new StoreIterator();
-    }
-
-    /**
-     * Clear the items in the list.
-     */
-    public void clear()
-    {
-        size = 0;
     }
 
     /**
@@ -98,12 +127,10 @@ public final class IntArrayList
         @Override
         public int next()
         {
-            int batch = pointer / BatchSize;
-            int index = pointer % BatchSize;
-
+            int result = getInt(pointer);
             pointer++;
 
-            return list.get(batch)[index];
+            return result;
         }
 
     }

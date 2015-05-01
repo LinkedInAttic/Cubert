@@ -59,10 +59,12 @@ public class BlockUtils
         Block block;
         if (indexEntry == null)
         {
-            if (emptyForMissing)
-                return new EmptyBlock(props);
+          if (emptyForMissing){
+              long blockId = props.getBlockId();
+              return new EmptyBlock(props, blockId);
+          }
 
-            throw new IOException(String.format("Index entry is null"));
+          throw new IOException(String.format("Index entry is null"));
         }
 
         // populate props
@@ -145,10 +147,10 @@ public class BlockUtils
         }
     }
 
-    public static int getBlockId(Tuple partitionKey)
+    public static long getBlockId(Tuple partitionKey)
     {
         long h = partitionKey.hashCode();
-        return (int) (h < 0 ? -h : h);
+        return (h < 0 ? -h : h);
     }
 
     public static Map<Object, Pair<Integer, Integer>> generateColumnIndex(RubixMemoryBlock inputBlock,

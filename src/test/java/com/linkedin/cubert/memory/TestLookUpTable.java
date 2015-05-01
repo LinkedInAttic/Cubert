@@ -41,18 +41,17 @@ public class TestLookUpTable
     private final String[] comparatorKeys = {"Integer"};
     private final int[] comparatorIndices;
 
+    private DataGenerator dataGenerator;
+    private final BlockSchema schema;
+
     public TestLookUpTable() throws IOException
     {
         TestSerializedTupleStore.setup(false);
-        final BlockSchema schema = DataGenerator.createBlockSchema();
-        DataGenerator instance = new DataGenerator();
-        List<Tuple> tuples = instance.generateRandomTuples(N_TUPLES, schema);
+        dataGenerator = new DataGenerator();
+        schema = DataGenerator.createBlockSchema();
 
         store = new SerializedTupleStore(schema, comparatorKeys);
-        for (final Tuple t : tuples)
-        {
-            store.addToStore(t);
-        }
+//        store = new ColumnarTupleStore(schema);
 
         comparatorIndices = new int[comparatorKeys.length];
         for (int i = 0; i < comparatorIndices.length; ++i)
@@ -64,6 +63,12 @@ public class TestLookUpTable
     @Test
     public void testHashTable() throws Exception
     {
+        List<Tuple> tuples = dataGenerator.generateRandomTuples(N_TUPLES, schema);
+        for (final Tuple t : tuples)
+        {
+            store.addToStore(t);
+        }
+
         LookUpTable lookUpTable = new LookUpTable(store, comparatorKeys);
 
         for(int i = 0; i < lookUpTable.size() - 1; ++i)
@@ -79,13 +84,13 @@ public class TestLookUpTable
 
             start = System.currentTimeMillis();
             Tuple key = getKeyTuple(t);
-            final List<Tuple> tuples = lookUpTable.get(key);
+            final List<Tuple> results = lookUpTable.get(key);
             end = System.currentTimeMillis();
             total += end - start;
 
-            Assert.assertNotNull(tuples);
-            Assert.assertTrue(tuples.contains(t));
-            for (Tuple result : tuples)
+            Assert.assertNotNull(results);
+            Assert.assertTrue(results.contains(t));
+            for (Tuple result : results)
             {
                 for (int i = 0; i < comparatorIndices.length; ++i)
                 {
@@ -94,6 +99,31 @@ public class TestLookUpTable
             }
         }
         print.f("TestLookUpTable: HashTable queries for %d entries done in %d ms", lookUpTable.size(), total);
+    }
+
+    @Test
+    public void testManual() throws Exception
+    {
+        BlockSchema schema = DataGenerator.createBlockSchema();
+        dataGenerator.setMIN_INT(0);
+        dataGenerator.setMAX_INT(1000000);
+        dataGenerator.setMIN_STRING_LENGTH(5);
+        dataGenerator.setMAX_STRING_LENGTH(10);
+
+        final int nTuples = 1000;
+        final List<Tuple> tuples = dataGenerator.generateSequentialTuples(nTuples, schema);
+        for (final Tuple t : tuples)
+        {
+            store.addToStore(t);
+        }
+        LookUpTable lookUpTable = new LookUpTable(store, comparatorKeys);
+
+        for (Tuple t : tuples)
+        {
+            final List<Tuple> results = lookUpTable.get(getKeyTuple(t));
+            Assert.assertEquals(results.size(), 1);
+            Assert.assertEquals(results.iterator().next(), t);
+        }
     }
 
     private Tuple getKeyTuple(Tuple t) throws ExecException

@@ -93,6 +93,14 @@ public class DefaultCubeAggregator implements CubeAggregator
     }
 
     @Override
+    public void clear()
+    {
+        int size = valueTable.length;
+        for (int i = 0; i < size; i++)
+            valueTable[i] = aggregator.initialValue();
+    }
+
+    @Override
     public void processTuple(Tuple tuple) throws ExecException
     {
         // if we don't know the input value, use the dummyObject
@@ -124,5 +132,4 @@ public class DefaultCubeAggregator implements CubeAggregator
 
         return new BlockSchema(str);
     }
-
 }

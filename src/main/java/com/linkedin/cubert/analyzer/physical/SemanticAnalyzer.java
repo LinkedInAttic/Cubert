@@ -20,10 +20,14 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.linkedin.cubert.block.DataType;
+import com.linkedin.cubert.utils.SchemaUtils;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ObjectNode;
 
@@ -34,6 +38,7 @@ import com.linkedin.cubert.io.rubix.RubixConstants;
 import com.linkedin.cubert.operator.BlockOperator;
 import com.linkedin.cubert.operator.OperatorFactory;
 import com.linkedin.cubert.operator.OperatorType;
+import com.linkedin.cubert.operator.PivotBlockOperator;
 import com.linkedin.cubert.operator.PostCondition;
 import com.linkedin.cubert.operator.PreconditionException;
 import com.linkedin.cubert.operator.PreconditionExceptionType;
@@ -45,9 +50,9 @@ import com.linkedin.cubert.utils.print;
 
 /**
  * Sematically analyzes the cubert physical plan.
- * 
+ *
  * @author Maneesh Varshney
- * 
+ *
  */
 public class SemanticAnalyzer extends PhysicalPlanVisitor implements PlanRewriter
 {
@@ -114,6 +119,10 @@ public class SemanticAnalyzer extends PhysicalPlanVisitor implements PlanRewrite
 
     private final Map<String, Node> operatorMap = new HashMap<String, Node>();
     private boolean debugMode = false;
+
+    // List of final operator node from each mapper
+    // The number of entries in this list is equal to # multimappers
+    List<Node> mapOutputNodes = new ArrayList<Node>();
 
     public Node getNodeInformation()
     {
@@ -204,6 +213,8 @@ public class SemanticAnalyzer extends PhysicalPlanVisitor implements PlanRewrite
         linkedListHead = null;
         blockIndexJoinKeys = null;
         operatorMap.clear();
+
+        mapOutputNodes.clear();
     }
 
     @Override
@@ -227,6 +238,14 @@ public class SemanticAnalyzer extends PhysicalPlanVisitor implements PlanRewrite
         ((ObjectNode) json).put("schema", inputCondition.getSchema().toJson());
 
         Node node = new Node(json, inputCondition);
+
+        // If the linkedListHead is not null, it implies there was a previous multimapper
+        // In which case, store the Node in a list for now.
+        // We will validate the postconditions in visitShuffle()
+        if (linkedListHead != null)
+        {
+            mapOutputNodes.add(linkedListHead);
+        }
 
         linkedListHead = node;
         operatorMap.clear();
@@ -358,9 +377,145 @@ public class SemanticAnalyzer extends PhysicalPlanVisitor implements PlanRewrite
         }
     }
 
+    private BlockSchema createReduceSideJoinSchema(Node leftNode, Node rightNode, JsonNode shuffleJson)
+    {
+        // Build a "union" schema for the join
+        BlockSchema leftSchema = leftNode.condition.getSchema();
+        BlockSchema rightSchema = rightNode.condition.getSchema();
+        String[] joinKeys = asArray(leftNode.json, "joinKeys");
+
+        // validate the the join keys have same schema in both mappers
+        for (String joinKey: joinKeys)
+        {
+            ColumnType leftType = leftSchema.getColumnType(leftSchema.getIndex(joinKey));
+            ColumnType rightType = rightSchema.getColumnType(rightSchema.getIndex(joinKey));
+
+            if (!leftType.equals(rightType))
+            {
+                error(shuffleJson, "Datatype of join key " + joinKey + " is not same. Left: "
+                            + leftType + " Right: " + rightType);
+            }
+        }
+
+        // validate that column names are different in left and right tables
+        Set<String> joinKeySet = new HashSet<String>();
+        Set<String> leftColumnSet = new HashSet<String>();
+        for (String str: joinKeys)
+                joinKeySet.add(str);
+
+        for (String str: leftSchema.getColumnNames())
+            leftColumnSet.add(str);
+
+        for (String str: rightSchema.getColumnNames())
+                if (leftColumnSet.contains(str) && !joinKeySet.contains(str))
+                    error(shuffleJson, "The names of columns (other than join keys) must be different. Found: " + str);
+
+        // the new schema will have #leftColumns + #rightColumn - #joinKeys + 1 (tag)
+        ColumnType[] joinTypes = new ColumnType[leftSchema.getNumColumns() + rightSchema.getNumColumns() - joinKeys.length + 1];
+        Set<String> joinKeysSet = new HashSet<String>();
+
+        // fill the schema with the join keys
+        int idx = 0;
+        for (String joinKey: joinKeys)
+        {
+            joinTypes[idx++] = leftSchema.getColumnType(leftSchema.getIndex(joinKey));
+            joinKeysSet.add(joinKey);
+        }
+
+
+        // fill the remaining columns from the left schema
+        for (int i = 0; i < leftSchema.getNumColumns(); i++)
+        {
+            String colName = leftSchema.getName(i);
+            if (joinKeysSet.contains(colName))
+                continue;
+            joinTypes[idx++] = leftSchema.getColumnType(i);
+        }
+
+        // fill the remaining columns from the right schema
+        for (int i = 0; i < rightSchema.getNumColumns(); i++)
+        {
+            String colName = rightSchema.getName(i);
+            if (joinKeysSet.contains(colName))
+                continue;
+            joinTypes[idx++] = rightSchema.getColumnType(i);
+        }
+
+
+        // finally, fill the schema for tag (this is LAST columns)
+        joinTypes[idx++] = new ColumnType("___tag", DataType.INT);
+
+        BlockSchema joinSchema = new BlockSchema(joinTypes);
+
+        return joinSchema;
+    }
+
     @Override
     public void visitShuffle(JsonNode json)
     {
+        // Add the current Mapper node in the list
+        mapOutputNodes.add(linkedListHead);
+
+        // if there are more than one mappers (multi-mapper situation)
+        if (mapOutputNodes.size() > 1)
+        {
+            // special case: REDUCE-SIDE join
+            if (json.has("join") && json.get("join").getBooleanValue())
+            {
+                // Build a "union" schema for the join
+                Node leftNode = mapOutputNodes.get(0);
+                Node rightNode = mapOutputNodes.get(1);
+
+                BlockSchema joinSchema = createReduceSideJoinSchema(leftNode, rightNode, json);
+
+                // Assign this schema to both mappers
+                leftNode.condition = new PostCondition(joinSchema,
+                                                       leftNode.condition.getPartitionKeys(),
+                                                       leftNode.condition.getSortKeys());
+
+                rightNode.condition = new PostCondition(joinSchema,
+                                                        rightNode.condition.getPartitionKeys(),
+                                                        rightNode.condition.getSortKeys());
+
+                // set this joined schema in json for both operators
+                ((ObjectNode) leftNode.json).put("schema", joinSchema.toJson());
+                ((ObjectNode) rightNode.json).put("schema", joinSchema.toJson());
+            }
+
+            // validate that we are shuffling on the same name from each multi mapper
+            // Also validate that the schema is identical (with one exception: ReduceSideJoin)
+            String outputName = getText(mapOutputNodes.get(0).json, "output");
+            BlockSchema firstSchema = mapOutputNodes.get(0).getPostCondition().getSchema();
+            BlockSchema widerSchema = firstSchema;
+
+            for (int i = 1; i < mapOutputNodes.size(); i++)
+            {
+                String name = getText(mapOutputNodes.get(i).json, "output");
+                BlockSchema schema = mapOutputNodes.get(i).getPostCondition().getSchema();
+
+                if (!name.equals(outputName))
+                    error(json, "Multimappers must shuffle on same block names. Found: " + name + " and " + outputName);
+
+                if (!firstSchema.equalsIgnoreNumeric(schema))
+                    error(json, "Multimappers must have same output schema. Found:\n\t"
+                                + firstSchema + " and\n\t" + schema);
+
+                widerSchema = SchemaUtils.getWiderSchema(widerSchema, schema);
+            }
+
+            // update the condition for each multimapper with wider type
+            for (int i = 0; i < mapOutputNodes.size(); i++)
+            {
+
+                PostCondition condition = mapOutputNodes.get(i).condition;
+                mapOutputNodes.get(i).condition = new PostCondition(widerSchema,
+                                                                    condition.getPartitionKeys(),
+                                                                    condition.getSortKeys());
+            }
+
+        }
+
+
         String[] inputNames = asArray(json.get("name"));
         Map<String, PostCondition> preConditions = getPreconditions(inputNames, json);
         if (preConditions == null)
@@ -434,42 +589,35 @@ public class SemanticAnalyzer extends PhysicalPlanVisitor implements PlanRewrite
         ((ObjectNode) json).put("schema", postCondition.getSchema().toJson());
 
         // create a node for this operator
-
-        Node node = new Node(json, postCondition);
+        Node shuffleNode = new Node(json, postCondition);
 
         for (String inputName : inputNames)
         {
             Node parent = operatorMap.get(inputName);
-            parent.setChild(node);
-            node.addParent(parent);
+            parent.setChild(shuffleNode);
+            shuffleNode.addParent(parent);
         }
 
         // validate that all operators are used once
-        node = linkedListHead;
-        while (node != null)
-        {
-            if (node.child == null)
-                error(node.json, "The output of this command is not used");
-            node = node.next;
-        }
 
-        // in case of multi-mapper, validate this shuffle has the same post
-        // condition as other shuffles
-        if (lastShuffleNode != null)
+        for (Node node : mapOutputNodes)
         {
-            if (!lastShuffleNode.condition.equals(postCondition))
-                error(json, "Multiple mappers do not generate same schema for shuffle");
+            node.setChild(shuffleNode);
+
+            while (node != null)
+            {
+                if (node.child == null)
+                    error(node.json, "The output of this command is not used");
+                node = node.next;
+            }
         }
 
         // start a new chain with shuffle as the input block
-        node = new Node(json, postCondition);
         operatorMap.clear();
-        linkedListHead = node;
-        operatorMap.put(getText(json, "name"), node);
-
-        lastShuffleNode = node;
-
+        linkedListHead = shuffleNode;
+        operatorMap.put(getText(json, "name"), shuffleNode);
     }
+
 
     @Override
     public void exitJob(JsonNode json)
@@ -740,22 +888,8 @@ public class SemanticAnalyzer extends PhysicalPlanVisitor implements PlanRewrite
             }
             case PIVOT_BLOCK:
             {
-                PostCondition preCondition = preConditions.values().iterator().next();
-                String[] pivotBy = JsonUtils.asArray(json, "pivotBy");
-                if (!CommonUtils.isPrefix(preCondition.getSortKeys(), pivotBy))
-                {
-                    throw new PreconditionException(PreconditionExceptionType.INVALID_SORT_KEYS);
-                }
-                String[] sortKeys =
-                        Arrays.copyOfRange(preCondition.getSortKeys(),
-                                           pivotBy.length,
-                                           preCondition.getSortKeys().length);
-
-                return new PostCondition(preCondition.getSchema(),
-                                         preCondition.getPartitionKeys(),
-                                         sortKeys,
-                                         pivotBy);
-
+                BlockOperator operator = new PivotBlockOperator();
+                return operator.getPostCondition(preConditions, json);
             }
             case COLLATE_VECTOR_BLOCK:
             {

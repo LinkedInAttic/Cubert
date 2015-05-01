@@ -221,7 +221,7 @@ public class TestOperators
         ArrayBlock.assertData(output, expected, new String[] { "block1.a", "block2.a" });
     }
 
-    @Test
+//    @Test
     // when there are multiple rows in one table
     public void testRightHashJoin() throws JsonGenerationException,
             JsonMappingException,

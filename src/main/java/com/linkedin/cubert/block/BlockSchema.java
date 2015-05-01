@@ -307,6 +307,35 @@ public class BlockSchema
         return true;
     }
 
+    /**
+     * Compares schemas by ignoring mismatches in the numerical types.
+     *
+     * @param other
+     * @return
+     */
+    public boolean equalsIgnoreNumeric(BlockSchema other)
+    {
+        if (this.columnTypes.length != other.columnTypes.length)
+            return false;
+
+        for (int i = 0; i < columnTypes.length; i++)
+        {
+            ColumnType type1 = columnTypes[i];
+            ColumnType type2 = other.columnTypes[i];
+
+            if (!type1.getName().equals(type2.getName()))
+                return false;
+
+            if (type1.getType().isNumerical() && type2.getType().isNumerical())
+                continue;
+
+            if (!type1.matches(type2))
+                return false;
+        }
+
+        return true;
+    }
+
     @Override
     public String toString()
     {

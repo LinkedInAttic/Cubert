@@ -52,6 +52,12 @@ public class ColumnType
         this.type = type;
     }
 
+    public ColumnType(String name, DataType type, BlockSchema columnSchema)
+    {
+        this(name, type);
+        this.columnSchema = columnSchema;
+    }
+
     public String getName()
     {
         return name;

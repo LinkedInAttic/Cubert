@@ -49,6 +49,16 @@ public final class DefaultDupleCubeAggregator extends DefaultCubeAggregator impl
     }
 
     @Override
+    public void clear()
+    {
+        super.clear();
+
+        int size = innerValueTable.length;
+        for (int i = 0; i < size; i++)
+            innerValueTable[i] = innerAgg.initialValue();
+    }
+
+    @Override
     public void innerAggregate(int index)
     {
         if (currentValue == null)

@@ -135,8 +135,10 @@ public class CompactHashTableBase
 
     private int getValidHashCode(DimensionKey key)
     {
-        long h = key.hashCode();
-        return (int) (h < 0 ? -h : h);
+        int h = key.hashCode();
+        if (h == Integer.MIN_VALUE)
+            h = Integer.MAX_VALUE;
+        return h < 0 ? -h : h;
     }
 
     // No need to have this pair any more

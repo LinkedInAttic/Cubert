@@ -30,6 +30,7 @@ public class BitwiseORAggregation implements AggregationFunction
     private int outputColumnIndex;
 
     private boolean nonNullValueSeen = false;
+    private DataType inputType;
 
     @Override
     public void setup(Block block, BlockSchema outputSchema, JsonNode json) throws IOException
@@ -38,7 +39,7 @@ public class BitwiseORAggregation implements AggregationFunction
 
         String inputColumnName = JsonUtils.asArray(json, "input")[0];
         inputColumnIndex = inputSchema.getIndex(inputColumnName);
-
+        inputType = inputSchema.getType(inputSchema.getIndex(inputColumnName));
         String outputColumnName = JsonUtils.getText(json, "output");
         outputColumnIndex = outputSchema.getIndex(outputColumnName);
 
@@ -61,15 +62,20 @@ public class BitwiseORAggregation implements AggregationFunction
 
         nonNullValueSeen = true;
 
-        long value = (Long) input.get(inputColumnIndex);
+        long value = ((Number) (input.get(inputColumnIndex))).longValue();
         bitmap |= value;
     }
 
     @Override
     public void output(Tuple output) throws IOException
     {
-        if (nonNullValueSeen)
+        if (nonNullValueSeen) {
+          if (inputType == DataType.INT){
+            output.set(outputColumnIndex, (Integer) ((int) bitmap));
+          }
+          else
             output.set(outputColumnIndex, bitmap);
+        }
         else
             output.set(outputColumnIndex, null);
         resetState();
@@ -96,7 +102,7 @@ public class BitwiseORAggregation implements AggregationFunction
                                             inputColName);
 
         String outputColName = JsonUtils.getText(json, "output");
-        DataType inputType = inputSchema.getType(inputSchema.getIndex(inputColName));
+        inputType = inputSchema.getType(inputSchema.getIndex(inputColName));
 
         if (inputType != DataType.INT && inputType != DataType.LONG)
             throw new PreconditionException(PreconditionExceptionType.INVALID_SCHEMA,

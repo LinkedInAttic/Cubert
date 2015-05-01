@@ -40,6 +40,7 @@ dependencies {
 	compile "dk.brics.automaton:automaton:1.11-8"
 	compile "joda-time:joda-time:$jodaVersion"
 	compile "com.googlecode.json-simple:json-simple:1.1"
+        compile "org.roaringbitmap:RoaringBitmap:0.4.8"
 
 	/* Dependencies for testCompile collection */
 	testCompile "org.testng:testng:6.8.5"
@@ -52,6 +53,7 @@ dependencies {
 	fatjar "org.apache.avro:avro-mapred:$avroMapredVersion"
 	fatjar "org.antlr:antlr4-runtime:$antlrVersion"
 	fatjar "dk.brics.automaton:automaton:1.11-8"
+        fatjar "org.roaringbitmap:RoaringBitmap:0.4.8"
 }
 
 /** 

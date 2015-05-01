@@ -108,6 +108,11 @@ public class TupleComparator implements Comparator<Tuple>
             double val2 = ((Number) o2).doubleValue();
             return Double.compare(val1, val2);
         }
+        case MAP:
+        {
+          byte pigType = org.apache.pig.data.DataType.MAP;
+          return org.apache.pig.data.DataType.compare(o1, o2, pigType, pigType);
+        }
         default:
             return ((Comparable) o1).compareTo(o2);
         }

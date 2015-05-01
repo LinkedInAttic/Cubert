@@ -40,6 +40,7 @@ public class TeeOperator implements TupleOperator
 
     private GenerateOperator generateOperator;
     private FunctionTree filterTree;
+    private boolean passthrough = true;
 
     public static void closeFiles() throws IOException
     {
@@ -55,6 +56,8 @@ public class TeeOperator implements TupleOperator
     {
         block = input.values().iterator().next();
         String prefix = JsonUtils.getText(json, "prefix");
+
+        passthrough = json.get("passthrough").getBooleanValue();
 
         BlockSchema teeSchema = new BlockSchema(json.get("teeSchema"));
 
@@ -129,18 +132,35 @@ public class TeeOperator implements TupleOperator
     public Tuple next() throws IOException,
             InterruptedException
     {
-        Tuple tuple = block.next();
-        tee(tuple);
-        return tuple;
+        Tuple tuple;
+
+        while ((tuple = block.next()) != null)
+        {
+            boolean isTeed = tee(tuple);
+
+            if (passthrough || !isTeed)
+                return tuple;
+        }
+
+        // make sure we give the "null" tuple to tee() method as well
+        tee(null);
+        return null;
     }
 
-    private void tee(Tuple tuple) throws IOException,
+    /**
+     *
+     * @param tuple the input tuple
+     * @return true, if the tuple was written to TEE file
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    private boolean tee(Tuple tuple) throws IOException,
             InterruptedException
     {
         if (tuple == null)
         {
             writer.flush();
-            return;
+            return false;
         }
         boolean isFiltered = true;
 
@@ -162,6 +182,8 @@ public class TeeOperator implements TupleOperator
                 writer.write(generateOperator.next(tuple));
             }
         }
+
+        return isFiltered;
     }
 
     @Override

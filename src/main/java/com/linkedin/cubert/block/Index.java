@@ -11,6 +11,10 @@
 
 package com.linkedin.cubert.block;
 
+import com.linkedin.cubert.io.BlockSerializationType;
+import com.linkedin.cubert.io.rubix.RubixConstants;
+import com.linkedin.cubert.io.rubix.RubixFile;
+import com.linkedin.cubert.io.rubix.RubixFile.KeyData;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -19,17 +23,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.pig.data.Tuple;
 
-import com.linkedin.cubert.io.BlockSerializationType;
-import com.linkedin.cubert.io.rubix.RubixConstants;
-import com.linkedin.cubert.io.rubix.RubixFile;
-import com.linkedin.cubert.io.rubix.RubixFile.KeyData;
 
 /**
  * Represents the index for relation stored in rubix format.
@@ -59,14 +58,19 @@ public class Index implements Serializable
                 new Path(new Path(rootdir), RubixConstants.RUBIX_EXTENSION_FOR_GLOB);
         FileStatus[] allFiles = FileSystem.get(conf).globStatus(globPath);
 
+        boolean first = true;
         for (FileStatus status : allFiles)
         {
             Path path = status.getPath();
             RubixFile<Tuple, Void> rubixFile = new RubixFile<Tuple, Void>(conf, path);
 
-            index.serializationType = rubixFile.getBlockSerializationType();
-
             final List<KeyData<Tuple>> keyDataList = rubixFile.getKeyData();
+
+            if (first)
+            {
+                index.serializationType = rubixFile.getBlockSerializationType();
+                first = false;
+            }
 
             if (keyDataList == null || keyDataList.size() == 0)
             {
@@ -171,8 +175,8 @@ public class Index implements Serializable
 
     public int getReducerId(Tuple key)
     {
-        int hashcode = BlockUtils.getBlockId(key);
-        return hashcode % numHashPartitions;
+        long hashcode = BlockUtils.getBlockId(key);
+        return (int) (hashcode % numHashPartitions);
     }
 
     private void buildBlockIdMap()
@@ -224,4 +228,34 @@ public class Index implements Serializable
         }
     }
 
+    /**
+     * This distributes the blocks in a round robin fashion.
+     *
+     * The algorithm is as follows:
+     *      Step 1> Flatten all the blocks in each reducer bucket to a list.
+     *      Step 2> Sort by block ID
+     *      Step 3> Every ith element in the list goes to the (i % nReducers)th reducer.
+     *
+     * @param nReducers the configured number of reducers
+     * @return a mapping of blockId --> The reducer to which it should be redirected to
+     */
+    public Map<Long, Integer> getBlockIdPartitionMap(int nReducers)
+    {
+        Map<Long, Integer> blockIdReducerMap = new HashMap<Long, Integer>();
+
+        List<Long> blockIds = new ArrayList<Long>();
+        for (List<IndexEntry> indexEntries : entryMap.values())
+        {
+            for (IndexEntry indexEntry : indexEntries)
+            {
+                blockIds.add(indexEntry.getBlockId());
+            }
+        }
+        Collections.sort(blockIds);
+        for (int i = 0; i < blockIds.size(); ++i)
+        {
+            blockIdReducerMap.put(blockIds.get(i), i % nReducers);
+        }
+        return blockIdReducerMap;
+    }
 }

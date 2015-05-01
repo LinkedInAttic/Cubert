@@ -96,45 +96,59 @@ public class AvroUtils
     public static Schema convertFromBlockSchema(String recordName, BlockSchema schema)
     {
         arrayElemInSchemaCounter = 0;
-        return convertFromBlockSchema(recordName, Type.RECORD, schema);
+        return convertFromBlockSchema(recordName, Type.RECORD, schema, true);
+    }
+
+    private static Field[] createFields(BlockSchema schema){
+      Field[] fields = new Field[schema.getNumColumns()];
+      for (int idx = 0; idx < fields.length; idx++)
+      {
+        final ColumnType col = schema.getColumnType(idx);
+        final DataType colType = col.getType();
+        final Type subType = convertToAvroType(colType);
+        
+        final Schema colSchema;
+        if (col.getColumnSchema() != null ||
+            subType == Type.ARRAY || subType == Type.MAP)
+        {
+          colSchema =
+            convertFromBlockSchema(col.getName(),
+                                   subType,
+                                   col.getColumnSchema(), false);
+          
+        }
+        else
+        {
+          List<Schema> unionSchema = new ArrayList<Schema>();
+          unionSchema.add(Schema.create(Type.NULL));
+          unionSchema.add(Schema.create(subType));
+          
+          colSchema = Schema.createUnion(unionSchema);
+        }
+        fields[idx] = new Field(col.getName(), colSchema, null, null);
+      }
+      return fields;
     }
 
     private static Schema convertFromBlockSchema(final String name,
                                                  final Type type,
-                                                 final BlockSchema schema)
+                                                 final BlockSchema schema,
+                                                 boolean toplevel)
     {
-        Field[] fields = new Field[schema.getNumColumns()];
-        for (int idx = 0; idx < fields.length; idx++)
-        {
-            final ColumnType col = schema.getColumnType(idx);
-            final DataType colType = col.getType();
-            final Type subType = convertToAvroType(colType);
-
-            final Schema colSchema;
-            if (col.getColumnSchema() != null)
-            {
-                colSchema =
-                        convertFromBlockSchema(col.getName(),
-                                               subType,
-                                               col.getColumnSchema());
-            }
-            else
-            {
-                final List<Schema> unionSchema = new ArrayList<Schema>();
-                unionSchema.add(Schema.create(Type.NULL));
-                unionSchema.add(Schema.create(subType));
-
-                colSchema = Schema.createUnion(unionSchema);
-            }
-            fields[idx] = new Field(col.getName(), colSchema, null, null);
-        }
 
         Schema avroSchema;
         switch (type)
         {
         case RECORD:
+            Field[] fields = createFields(schema);
             avroSchema = Schema.createRecord(name, null, null, false);
             avroSchema.setFields(Arrays.asList(fields));
+            if (toplevel)
+              break;
+            List<Schema> unionSchema = new ArrayList<Schema>();
+            unionSchema.add(Schema.create(Type.NULL));
+            unionSchema.add(avroSchema);
+            avroSchema = Schema.createUnion(unionSchema);
             break;
         case ARRAY:
         {
@@ -154,12 +168,12 @@ public class AvroUtils
                 elemType =
                         convertFromBlockSchema(elemColType.getName() + (arrayElemInSchemaCounter++),
                                                convertToAvroType(elemColType.getType()),
-                                               elemColType.getColumnSchema());
+                                               elemColType.getColumnSchema(), false);
             }
 
             avroSchema = Schema.createArray(elemType);
 
-            final List<Schema> unionSchema = new ArrayList<Schema>();
+            unionSchema = new ArrayList<Schema>();
             unionSchema.add(Schema.create(Type.NULL));
             unionSchema.add(avroSchema);
             avroSchema = Schema.createUnion(unionSchema);
@@ -179,11 +193,11 @@ public class AvroUtils
                 valueType =
                         convertFromBlockSchema(valueColType.getName(),
                                                convertToAvroType(valueColType.getType()),
-                                               valueColType.getColumnSchema());
+                                               valueColType.getColumnSchema(), false);
             }
             avroSchema = Schema.createMap(valueType);
 
-            final List<Schema> unionSchema = new ArrayList<Schema>();
+            unionSchema = new ArrayList<Schema>();
             unionSchema.add(Schema.create(Type.NULL));
             unionSchema.add(avroSchema);
             avroSchema = Schema.createUnion(unionSchema);
@@ -207,6 +221,10 @@ public class AvroUtils
         else if (colType == DataType.BAG)
         {
             subType = Type.ARRAY;
+        }
+        else if (colType == DataType.MAP)
+        {
+          subType = Type.MAP;
         }
         else
         {

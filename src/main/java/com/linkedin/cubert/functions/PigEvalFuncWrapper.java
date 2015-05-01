@@ -65,6 +65,7 @@ public class PigEvalFuncWrapper extends Function
 
                 BlockSchema outputSchema =
                         SchemaUtils.convertToBlockSchema(pigOutputSchema);
+               
                 if (outputSchema.getNumColumns() > 1)
                 {
                     outputType = new ColumnType(null, DataType.TUPLE);
@@ -72,7 +73,18 @@ public class PigEvalFuncWrapper extends Function
                 }
                 else
                 {
-                    outputType = new ColumnType(null, outputSchema.getType(0));
+                    DataType type = outputSchema.getType(0);
+                    outputType = new ColumnType(null, type);
+
+                  // handle the case when outSchema contains a single field of
+                  // type BAG or of type tuple.
+                  // In this case, the return type is either a BAG or TUPLE.
+                  // In the latter case,
+                  // column schema should be set to contain all fields
+                  // of the TUPLE (which is field#0).
+                  if (type == DataType.BAG || type == DataType.TUPLE) {
+                      outputType.setColumnSchema(outputSchema.getColumnType(0).getColumnSchema());
+                  }
                 }
 
                 return outputType;

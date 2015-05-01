@@ -73,6 +73,8 @@ public class ArithmeticFunction extends Function
             return times(o1, o2);
         case LSHIFT:
             return lshift(o1, o2);
+        case RSHIFT:
+            return rshift(o1, o2);
         default:
             break;
         }
@@ -165,6 +167,20 @@ public class ArithmeticFunction extends Function
         return null;
     }
 
+    private Object rshift(Object o1, Object o2)
+    {
+        switch (outputType)
+        {
+        case INT:
+            return ((Number) o1).intValue() >>> ((Number) o2).intValue();
+        case LONG:
+            return ((Number) o1).longValue() >>> ((Number) o2).longValue();
+        default:
+            break;
+        }
+        return null;
+    }
+
     private Object lshift(Object o1, Object o2)
     {
         switch (outputType)
@@ -185,7 +201,7 @@ public class ArithmeticFunction extends Function
         ColumnType type1 = inputSchema.getColumnType(0);
         ColumnType type2 = inputSchema.getColumnType(1);
 
-        if ((type == FunctionType.LSHIFT || type == FunctionType.MOD)
+        if ((type == FunctionType.LSHIFT || type == FunctionType.MOD || type == FunctionType.RSHIFT)
                 && (!type1.getType().isIntOrLong() || !type2.getType().isIntOrLong()))
             throw new PreconditionException(PreconditionExceptionType.INVALID_SCHEMA,
                                             "The LHS and RHS of " + type

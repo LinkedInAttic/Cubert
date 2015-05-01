@@ -255,7 +255,7 @@ public class JsonUtils
         }
     }
 
-    public static String encodePath(JsonNode path)
+      public static String encodePath(JsonNode path)
     {
         if (path.isTextual())
             return path.getTextValue();
@@ -264,6 +264,8 @@ public class JsonUtils
             String root = getText(path, "root");
             int startDate = Integer.parseInt(getText(path, "startDate"));
             int endDate = Integer.parseInt(getText(path, "endDate"));
+            if (path.get("origStartDate") != null)
+              return String.format("%s#START%d#END%d#ORIGSTART%d", root, startDate, endDate, Integer.parseInt(getText(path, "origStartDate")));
             return String.format("%s#START%d#END%d", root, startDate, endDate);
         }
     }
@@ -275,16 +277,28 @@ public class JsonUtils
         if (pathStr.contains("#START"))
         {
             String root = pathStr.split("#START")[0];
-            String[] startEnd = pathStr.split("#START")[1].split("#END");
-            int startDate = Integer.parseInt(startEnd[0]);
-            int endDate = Integer.parseInt(startEnd[1]);
+            String[] startEnd;
+            int origStartDate = -1;
+            int startDate, endDate;
+            if (!pathStr.contains("#ORIGSTART")){
+                startEnd= pathStr.split("#START")[1].split("#END");
+                startDate = Integer.parseInt(startEnd[0]);
+                endDate = Integer.parseInt(startEnd[1]);
+            }
+            else {
+              startDate = Integer.parseInt(pathStr.split("#START")[1].split("#END")[0]);
+              endDate = Integer.parseInt(pathStr.split("#START")[1].split("#END")[1].split("#ORIGSTART")[0]);
+              origStartDate =  Integer.parseInt(pathStr.split("#START")[1].split("#END")[1].split("#ORIGSTART")[1]);
+            }
 
             node.put("root", root);
             node.put("startDate", startDate);
             node.put("endDate", endDate);
+            if (origStartDate != -1)
+              node.put("origStartDate", origStartDate);
             return node;
         }
-        else
+        else 
         {
             node.put("tmp", pathStr);
             return node.get("tmp");

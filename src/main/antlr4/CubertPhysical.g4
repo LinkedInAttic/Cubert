@@ -32,6 +32,7 @@ columnDictionary: COLUMN ID VALUES STRING (',' STRING)*;
 
 mapReduceJob: JOB
 				name=STRING
+				(setCommand)*
 				(MAPPERS mappersCount=INT ';')?
 				(REDUCERS reducersCount=INT ';')?
 				(mapCommands)+
@@ -45,7 +46,9 @@ macroShuffleCommand: shuffleCommand
                      | blockgenShuffleCommand
                      | cubeShuffleCommand
                      | dictionaryShuffleCommand
-                     | distinctShuffleCommand;
+                     | distinctShuffleCommand
+                     | joinShuffleCommand
+                     | uriShuffleCommand;
 
 shuffleCommand: SHUFFLE ID PARTITIONEDON columns
                             (SORTEDON columns)?
@@ -56,6 +59,9 @@ blockgenShuffleCommand: BLOCKGEN (distinct=DISTINCT)? ID by blockgenType=ID
                             (SORTEDON columns)? ';';
 dictionaryShuffleCommand: DICTIONARY ID on columns ';';
 distinctShuffleCommand: DISTINCT ID ';';
+joinShuffleCommand: JOIN (joinType)? ID on columns (PARTITIONEDON columns)?';';
+
+uriShuffleCommand: uri ID '{' params? '}' ';';
 
 reduceCommands: REDUCE '{' statement+ '}';
 
@@ -118,8 +124,8 @@ generateOperator: FROM ID GENERATE generateExpressionList;
 flattenOperator: FLATTEN ID by flattenItem (',' flattenItem)*;
 loadCachedOperator: LOADCACHED path using format=ID ('(' params? ')')?;
 distinctOperator: DISTINCT ID;
-teeOperator: TEE ID INTO path using ID ('(' params? ')')? (GENERATE generateExpressionList)? (IF expression)?;
-pivotOperator: PIVOT (inmemory=INMEMORY)? ID (on columns) ? ;
+teeOperator: TEE (split=WITHSPLIT)? ID INTO path using ID ('(' params? ')')? (GENERATE generateExpressionList)? (IF expression)?;
+pivotOperator: PIVOT (inmemory=INMEMORY)? ID ((on columns)  | (by type=ID value=INT) ) ?;
 gatherOperator: GATHER ID (',' ID)*;
 validateOperator: VALIDATE ID by blockgenType=ID (blockgenValue=INT | index=path)? PARTITIONEDON columns  (SORTEDON columns)?;
 topNOperator: TOP (n=INT)? FROM ID GROUP by group=columns ORDERBY order=columns;
@@ -274,7 +280,8 @@ uriFragment : ID
     | UNSPLITTABLE
     | USING
     | VALIDATE
-    | VALUES;
+    | VALUES
+    | WITHSPLIT;
 
 
 // there is no reason why these are grammar rules rather than lexical tokens!
@@ -356,6 +363,7 @@ UNSPLITTABLE: 'UNSPLITTABLE' | 'unsplittable';
 USING: 'USING' | 'using';
 VALIDATE: 'VALIDATE' | 'validate';
 VALUES: 'VALUES' | 'values';
+WITHSPLIT: 'WITH SPLIT' | 'with split';
 
 
 MULDIV: '*' | '/';

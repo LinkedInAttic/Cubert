@@ -46,15 +46,15 @@ import com.linkedin.cubert.operator.cube.EasyCubeAggregatorBridge;
 import com.linkedin.cubert.operator.cube.ValueAggregationType;
 import com.linkedin.cubert.operator.cube.ValueAggregator;
 import com.linkedin.cubert.operator.cube.ValueAggregatorFactory;
+import com.linkedin.cubert.utils.ClassCache;
 import com.linkedin.cubert.utils.CommonUtils;
 import com.linkedin.cubert.utils.JsonUtils;
 import com.linkedin.cubert.utils.Pair;
-import com.linkedin.cubert.utils.ClassCache;
 
 /**
- *
+ * 
  * @author Maneesh Varshney
- *
+ * 
  */
 public class CubeOperator implements TupleOperator
 {
@@ -154,13 +154,18 @@ public class CubeOperator implements TupleOperator
         hashTable =
                 new CompactHashTableBase(dimensions.getDimensionKeyLength(),
                                          hashTableSize);
+
+        // set the flush threshold (if defined in conf)
+        flushThreshold =
+                PhaseContext.getConf().getFloat("cubert.cube.flush.threshold",
+                                                (float) flushThreshold);
     }
 
     /**
      * Process input tuples for cubing without inner dimensions. Note that
      * DupleCubeAggregators cannot be used here (any attempt to use such aggregators would
      * have be caught at the compile time).
-     *
+     * 
      * @return boolean flag to indicate if there is more input to be processed
      * @throws IOException
      * @throws InterruptedException
@@ -201,7 +206,7 @@ public class CubeOperator implements TupleOperator
 
     /**
      * Process input tuples for cubing WITH inner dimensions.
-     *
+     * 
      * @return boolean flag to indicate if there is more input to be processed
      * @return
      * @throws IOException
@@ -269,6 +274,11 @@ public class CubeOperator implements TupleOperator
     {
         hashTable.clear();
 
+        for (CubeAggregator agg: this.aggregators)
+            agg.clear();
+        for (DupleCubeAggregator agg: this.dupleAggregators)
+            agg.clear();
+
         if (hasInnerDimensions)
             return processWithInnerDimensions();
         else
@@ -324,9 +334,9 @@ public class CubeOperator implements TupleOperator
                 throw new PreconditionException(PreconditionExceptionType.COLUMN_NOT_PRESENT,
                                                 dim);
             DataType type = inputSchema.getType(inputSchema.getIndex(dim));
-            if (!type.isIntOrLong() && !type.equals(DataType.STRING))
+            if (!type.isIntOrLong() && type != DataType.BOOLEAN && !type.equals(DataType.STRING))
                 throw new PreconditionException(PreconditionExceptionType.INVALID_DIMENSION_TYPE,
-                                                "Expecting type: INT, LONG or STRING. Found: "
+                                                "Expecting type: BOOLEAN, INT, LONG or STRING. Found: "
                                                         + type);
         }
 

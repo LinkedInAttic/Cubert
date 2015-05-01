@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.codehaus.jackson.JsonNode;
@@ -57,7 +56,6 @@ public class CreateBlockOperator implements BlockOperator
         protected boolean isCostExceeded(long numTuples,
                                          long numPartitionKeys,
                                          long storeSize)
-
         {
             switch (type)
             {
@@ -368,7 +366,7 @@ public class CreateBlockOperator implements BlockOperator
     private String[] sortKeys;
 
     private final Set<Long> relevantBlockIds = new HashSet<Long>();
-    private Tuple blockIdTuple = TupleFactory.getInstance().newTuple(1);
+    private Map<Long, Integer> blockIdPartitionMap;
     private int reducerId = -1;
     private int nReducers = -1;
     boolean firstBlock = true;
@@ -441,6 +439,7 @@ public class CreateBlockOperator implements BlockOperator
             throw new RuntimeException(e);
         }
 
+        blockIdPartitionMap = index.getBlockIdPartitionMap(nReducers);
         for (Long blockId : index.getAllBlockIds())
         {
             if (isRelevant(blockId))
@@ -454,25 +453,12 @@ public class CreateBlockOperator implements BlockOperator
      * The relevance check is based on the fact that INDEX based join happens by shuffling
      * data on the BLOCK_ID.
      * 
-     * @param blockId
-     *            blockId
+     * @param blockId blockId
      * @return if the block is relevant to the current reducer
      */
     private boolean isRelevant(Long blockId)
     {
-        try
-        {
-            /* Reusing the blockIdTuple object */
-            blockIdTuple.set(0, blockId);
-        }
-        catch (ExecException e)
-        {
-            e.printStackTrace();
-        }
-
-        /* Is this reducer supposed to see this blockId */
-        final int hashCode = BlockUtils.getBlockId(blockIdTuple);
-        return hashCode % nReducers == reducerId;
+        return blockIdPartitionMap.get(blockId) == reducerId;
     }
 
     @Override

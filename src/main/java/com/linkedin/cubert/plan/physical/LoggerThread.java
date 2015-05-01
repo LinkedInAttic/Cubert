@@ -154,8 +154,11 @@ class LoggerThread extends Thread
         try
         {
             retval += jobexecutor.job.mapProgress();
-            retval += jobexecutor.job.reduceProgress();
-            retval /= 2;
+            if (jobexecutor.hasReducePhase())
+            {
+                retval += jobexecutor.job.reduceProgress();
+                retval /= 2;
+            }
             return retval;
         }
         catch (IllegalStateException e)

@@ -49,6 +49,10 @@ public class RubixBlockWriter implements BlockWriter
     public void write(Block block, CommonContext context) throws IOException,
             InterruptedException
     {
+        // increment the "blocks written" counter
+//        PhaseContext.getCounter("FileSystemCounters", "Rubix Blocks Written")
+  //                  .increment(1);
+
         Tuple outputTuple =
                 TupleFactory.getInstance().newTuple(outputSchema.getNumColumns());
         int[] outputFieldIndex = new int[outputSchema.getNumColumns()];
@@ -96,6 +100,7 @@ public class RubixBlockWriter implements BlockWriter
             projectColumns(tuple, outputTuple, outputFieldIndex);
             context.write(null, outputTuple);
         }
+
     }
 
     private void projectColumns(Tuple input, Tuple output, int[] fieldIndex) throws ExecException

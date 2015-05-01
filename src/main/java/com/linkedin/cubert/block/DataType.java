@@ -182,8 +182,12 @@ public enum DataType
             break;
         }
         default:
-            break;
+        {
+          if (type1 == type2)
+            return type1;
 
+            break;
+        }
         }
 
         return null;

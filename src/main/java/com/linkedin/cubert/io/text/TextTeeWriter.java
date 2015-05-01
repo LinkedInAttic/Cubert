@@ -14,16 +14,24 @@ package com.linkedin.cubert.io.text;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.GzipCodec;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.pig.backend.hadoop.executionengine.mapReduceLayer.PigTextOutputFormat;
 import org.apache.pig.data.Tuple;
 import org.codehaus.jackson.JsonNode;
 
 import com.linkedin.cubert.block.BlockSchema;
 import com.linkedin.cubert.io.TeeWriter;
+import com.linkedin.cubert.operator.PhaseContext;
 import com.linkedin.cubert.utils.JsonUtils;
+
 
 /**
  * Writes TEE data in TEXT format.
@@ -55,7 +63,7 @@ public class TextTeeWriter implements TeeWriter
         {
             writer.write(null, tuple);
         }
-    }
+     }
 
     private Delegate delegate;
     private DataOutputStream out;
@@ -69,22 +77,42 @@ public class TextTeeWriter implements TeeWriter
     {
 
         String separator = "\t";
-        if (json.has("params") && !json.get("params").isNull()
-                && json.get("params").has("separator"))
+        if (json.has("params") && !json.get("params").isNull() && json.get("params").has("separator"))
         {
             separator = JsonUtils.getText(json.get("params"), "separator");
         }
 
+        separator = StringEscapeUtils.unescapeJava(separator);
         byte[] bytes = separator.getBytes("UTF-8");
 
         if (bytes.length > 1)
-            throw new RuntimeException(String.format("Invalid separator in text output format %s",
-                                                     separator));
+        {
+            throw new RuntimeException(String.format("Invalid separator in text output format %s", separator));
+        }
 
-        out = FileSystem.get(conf).create(new Path(root, filename));
+        final TaskAttemptContext context = PhaseContext.isMapper() ?
+                PhaseContext.getMapContext() :
+                PhaseContext.getRedContext();
+
+        String extension = "";
+        CompressionCodec codec = null;
+        final boolean isCompressed = FileOutputFormat.getCompressOutput(context);
+        if (isCompressed)
+        {
+            Class<? extends CompressionCodec> codecClass =
+                    FileOutputFormat.getOutputCompressorClass(context, GzipCodec.class);
+
+            codec = ReflectionUtils.newInstance(codecClass, conf);
+            extension = codec.getDefaultExtension();
+        }
+
+        out = FileSystem.get(conf).create(new Path(root, filename + extension));
+        if (isCompressed)
+        {
+            out = new DataOutputStream(codec.createOutputStream(out));
+        }
 
         delegate = new Delegate(out, bytes[0]);
-
     }
 
     @Override
@@ -104,5 +132,4 @@ public class TextTeeWriter implements TeeWriter
     {
         out.flush();
     }
-
 }

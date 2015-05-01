@@ -14,6 +14,7 @@ package com.linkedin.cubert.io.avro;
 import java.io.IOException;
 
 import org.apache.avro.Schema;
+import org.apache.avro.file.CodecFactory;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericData.Record;
 import org.apache.avro.generic.GenericDatumWriter;
@@ -27,6 +28,8 @@ import org.codehaus.jackson.JsonNode;
 
 import com.linkedin.cubert.block.BlockSchema;
 import com.linkedin.cubert.io.TeeWriter;
+import com.linkedin.cubert.operator.PhaseContext;
+import com.linkedin.cubert.pig.piggybank.storage.avro.PigAvroDatumWriter;
 import com.linkedin.cubert.utils.AvroUtils;
 
 /**
@@ -37,9 +40,19 @@ import com.linkedin.cubert.utils.AvroUtils;
  */
 public class AvroTeeWriter implements TeeWriter
 {
-    private DataFileWriter<GenericRecord> dataFileWriter;
-    private Record record;
-    private int numColumns;
+    /** The configuration key for Avro deflate level. */
+    public static final String DEFLATE_LEVEL_KEY = "avro.mapred.deflate.level";
+
+    /** The default deflate level. */
+    public static final int DEFAULT_DEFLATE_LEVEL = 1;
+
+    /** The configuration key for the Avro codec. */
+    public static final String OUTPUT_CODEC = "avro.output.codec";
+
+    /** The deflate codec */
+    public static final String DEFLATE_CODEC = "deflate";
+
+    private DataFileWriter<Object> dataFileWriter;
 
     @Override
     public void open(Configuration conf,
@@ -52,24 +65,29 @@ public class AvroTeeWriter implements TeeWriter
         FileSystem fs = FileSystem.get(conf);
 
         Schema avroSchema = AvroUtils.convertFromBlockSchema("record", schema);
-        record = new Record(avroSchema);
-        numColumns = schema.getNumColumns();
 
-        DatumWriter<GenericRecord> datumWriter =
-                new GenericDatumWriter<GenericRecord>(avroSchema);
-        dataFileWriter = new DataFileWriter<GenericRecord>(datumWriter);
+        GenericDatumWriter<Object> datumWriter =
+                new PigAvroDatumWriter(avroSchema);
+        dataFileWriter = new DataFileWriter<Object>(datumWriter);
+
+        // if compression is requested, set the proper compression codec
+        if (PhaseContext.getConf().getBoolean("mapred.output.compress", false))
+        {
+            int level = conf.getInt(DEFLATE_LEVEL_KEY, DEFAULT_DEFLATE_LEVEL);
+            String codecName = conf.get(OUTPUT_CODEC, DEFLATE_CODEC);
+            CodecFactory factory =
+                    codecName.equals(DEFLATE_CODEC) ? CodecFactory.deflateCodec(level)
+                            : CodecFactory.fromString(codecName);
+            dataFileWriter.setCodec(factory);
+        }
+
         dataFileWriter.create(avroSchema, fs.create(teePath));
     }
 
     @Override
     public void write(Tuple tuple) throws IOException
     {
-        for (int i = 0; i < numColumns; i++)
-        {
-            Object field = tuple.get(i);
-            record.put(i, field);
-        }
-        dataFileWriter.append(record);
+        dataFileWriter.append(tuple);
     }
 
     @Override

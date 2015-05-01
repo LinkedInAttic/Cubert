@@ -58,7 +58,7 @@ public class IntSet
         if (!bitset.get(value))
         {
             bitset.set(value);
-            store.add(value);
+            store.addInt(value);
         }
     }
 

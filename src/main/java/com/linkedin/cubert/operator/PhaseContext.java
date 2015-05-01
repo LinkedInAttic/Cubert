@@ -14,6 +14,7 @@ package com.linkedin.cubert.operator;
 import java.io.IOException;
 import java.util.HashMap;
 
+import org.apache.pig.impl.util.UDFContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -62,9 +63,10 @@ public class PhaseContext
 
     private static void initCommonConfig(Configuration conf) throws IOException
     {
-        initialized = true;
         PhaseContext.conf = conf;
         ExecutionConfig.readConf(getConf());
+        UDFContext.getUDFContext().addJobConf(conf);
+        initialized = true;
     }
 
     public static boolean isIntialized()

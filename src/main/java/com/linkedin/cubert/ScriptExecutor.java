@@ -18,16 +18,19 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -35,6 +38,7 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
+import com.linkedin.cubert.utils.print;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -43,6 +47,9 @@ import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.JobConf;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.JsonMappingException;
@@ -59,11 +66,13 @@ import com.linkedin.cubert.analyzer.physical.PlanRewriteException;
 import com.linkedin.cubert.analyzer.physical.PlanRewriter;
 import com.linkedin.cubert.analyzer.physical.SemanticAnalyzer;
 import com.linkedin.cubert.analyzer.physical.ShuffleRewriter;
+import com.linkedin.cubert.analyzer.physical.SummaryRewriter;
 import com.linkedin.cubert.analyzer.physical.VariableNameUsed;
 import com.linkedin.cubert.plan.physical.ExecutorService;
 import com.linkedin.cubert.plan.physical.PhysicalParser;
 import com.linkedin.cubert.utils.ExecutionConfig;
 import com.linkedin.cubert.utils.JsonUtils;
+import com.linkedin.cubert.utils.RewriteUtils;
 
 /**
  * Compiles and executes cubert scripts.
@@ -313,14 +322,42 @@ public class ScriptExecutor
         rewriters.add(BlockgenLineageAnalyzer.class);
         rewriters.add(SemanticAnalyzer.class);
 
+        rewriters.add(SummaryRewriter.class);
+        rewriters.add(OverwriteAnalyzer.class);
+        rewriters.add(BlockgenLineageAnalyzer.class);
+        rewriters.add(DependencyAnalyzer.class);
+        rewriters.add(SemanticAnalyzer.class);
+
+        HashSet<Class <? extends PlanRewriter>> visitedRewriters = new HashSet<Class <? extends PlanRewriter>>();
+
         for (Class<? extends PlanRewriter> rewriterClass : rewriters)
         {
+            
+            boolean revisit = (visitedRewriters.contains(rewriterClass) ? true: false);
+
+            // revisit only performed, in the event of actual summary rewrite
+            if (revisit && !RewriteUtils.hasSummaryRewrite((ObjectNode) physicalPlan))
+              continue;
 
             physicalPlan =
                     rewriterClass.newInstance().rewrite(physicalPlan,
                                                         namesUsed,
                                                         debugMode,
-                                                        false);
+                                                        revisit);
+            visitedRewriters.add(rewriterClass);
+
+            if (debugMode) {
+              if (rewriterClass == SummaryRewriter.class &&
+                  RewriteUtils.hasSummaryRewrite((ObjectNode) physicalPlan)){
+                System.out.println("Physical plan after summary rewrite");
+                this.printPhysical();
+              }
+              
+              if (rewriterClass == SemanticAnalyzer.class && revisit){
+                System.out.println("Physical plan after semantic analyzer visit ");
+                this.printPhysical();
+              }
+            }
 
             if (physicalPlan == null)
                 return;
@@ -376,13 +413,7 @@ public class ScriptExecutor
     }
 
     @SuppressWarnings("static-access")
-    public static void main(String[] args) throws IOException,
-            InterruptedException,
-            ClassNotFoundException,
-            InstantiationException,
-            IllegalAccessException,
-            ScriptException,
-            ParseException
+    public static void main(String[] args) throws Exception
     {
         Options options = new Options();
 
@@ -401,6 +432,12 @@ public class ScriptExecutor
                                        .withDescription("use given parameter file")
                                        .withLongOpt("param_file")
                                        .create("f"));
+
+        options.addOption(OptionBuilder.withArgName("lib path")
+                .hasArg()
+                .withDescription("classpath to be uploaded to distributed cache")
+                .withLongOpt("cache_path")
+                .create("P"));
 
         options.addOption(OptionBuilder.withArgName("property=value")
                                        .hasArgs(2)
@@ -436,7 +473,7 @@ public class ScriptExecutor
             return;
         }
         String[] remainingArgs = line.getArgs();
-        if (remainingArgs == null || remainingArgs.length == 0)
+        if (remainingArgs.length == 0)
         {
             System.err.println("Cubert script file not specified");
             return;
@@ -451,7 +488,18 @@ public class ScriptExecutor
         if (propFiles != null && propFiles.length > 0)
         {
             for (String propFile : propFiles)
-                props.load(new BufferedReader(new FileReader(propFile)));
+            {
+                URI uri = new URI(propFile);
+                boolean isHDFS = (uri.getScheme()  != null) && uri.getScheme().equalsIgnoreCase("hdfs");
+                String path = uri.getPath();
+                if (isHDFS) {
+                    props.load(new BufferedReader(new InputStreamReader(
+                                    FileSystem.get(new JobConf()).open(new Path(path)))));
+                } else
+                {
+                    props.load(new BufferedReader(new FileReader(path)));
+                }
+            }
         }
 
         if (line.getOptionProperties("D").size() > 0)
@@ -491,14 +539,13 @@ public class ScriptExecutor
                 e.printStackTrace(System.err);
 
             System.err.println("\nCannot compile cubert script. Exiting.");
-            return;
+            throw e;
         }
         catch (Exception e)
         {
 
             System.err.println("\nCannot compile cubert script. Exiting.");
-            e.printStackTrace(System.err);
-            return;
+            throw e;
         }
         finally
         {
@@ -515,53 +562,64 @@ public class ScriptExecutor
         // Step 4: execute job
         if (line.hasOption("x"))
         {
-            int id;
-            try
-            {
-                id = Integer.parseInt(line.getOptionValue("x"));
-            }
-            catch (NumberFormatException e)
-            {
-                Map<Integer, String> matchedJobs = new HashMap<Integer, String>();
-                String jobToRun = line.getOptionValue("x");
-                id = 0;
+            Set<Integer> jobsToRun = new TreeSet<Integer>();
 
-                for (JsonNode job : exec.physicalPlan.get("jobs"))
-                {
-                    String jobName = JsonUtils.getText(job, "name");
-                    if (jobName.contains(jobToRun))
-                    {
-                        matchedJobs.put(id, jobName);
-                    }
-                    id++;
-                }
+            for (String idStr: line.getOptionValues("x"))
+                jobsToRun.add(getJobId(idStr, exec));
 
-                if (matchedJobs.isEmpty())
-                {
-                    throw new IllegalStateException("ERROR: There is no job that matches ["
-                            + jobToRun + "]");
-                }
-
-                if (matchedJobs.size() > 1)
-                {
-                    System.err.println("ERROR: There are more than one jobs that matches ["
-                            + jobToRun + "]:");
-                    for (Map.Entry<Integer, String> entry : matchedJobs.entrySet())
-                        System.err.println(String.format("\t[%d] %s",
-                                                         entry.getKey(),
-                                                         entry.getValue()));
-                    throw new IllegalStateException();
-                }
-
-                id = matchedJobs.keySet().iterator().next();
-            }
-
-            exec.execute(id);
+            for (int id: jobsToRun)
+                exec.execute(id);
         }
         else
         {
             exec.execute();
         }
+    }
+
+    private static int getJobId(String idStr, ScriptExecutor exec)
+    {
+        int id;
+        try
+        {
+            id = Integer.parseInt(idStr);
+        }
+        catch (NumberFormatException e)
+        {
+            Map<Integer, String> matchedJobs = new HashMap<Integer, String>();
+            String jobToRun = idStr;
+            id = 0;
+
+            for (JsonNode job : exec.physicalPlan.get("jobs"))
+            {
+                String jobName = JsonUtils.getText(job, "name");
+                if (jobName.contains(jobToRun))
+                {
+                    matchedJobs.put(id, jobName);
+                }
+                id++;
+            }
+
+            if (matchedJobs.isEmpty())
+            {
+                throw new IllegalStateException("ERROR: There is no job that matches ["
+                                                + jobToRun + "]");
+            }
+
+            if (matchedJobs.size() > 1)
+            {
+                System.err.println("ERROR: There are more than one jobs that matches ["
+                                   + jobToRun + "]:");
+                for (Map.Entry<Integer, String> entry : matchedJobs.entrySet())
+                    System.err.println(String.format("\t[%d] %s",
+                                                     entry.getKey(),
+                                                     entry.getValue()));
+                throw new IllegalStateException();
+            }
+
+            id = matchedJobs.keySet().iterator().next();
+        }
+
+        return id;
     }
 
     private static String readFile(File filename) throws IOException

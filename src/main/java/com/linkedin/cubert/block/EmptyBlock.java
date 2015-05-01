@@ -27,6 +27,12 @@ public class EmptyBlock implements Block
         props.setBlockId(EMPTY_BLOCKID);
     }
 
+    public EmptyBlock(BlockProperties props, long blockId)
+    {
+        this.props = props;
+        props.setBlockId(blockId);
+    }
+
     @Override
     public void configure(JsonNode json) throws IOException,
             InterruptedException

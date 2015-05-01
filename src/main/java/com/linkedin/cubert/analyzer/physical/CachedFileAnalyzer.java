@@ -41,6 +41,18 @@ public class CachedFileAnalyzer implements PlanRewriter
 {
     private final Configuration conf = new JobConf();
 
+    private static String cleanLatestTag(String fname){
+      if (fname.contains("#LATEST"))
+        return fname.replace("#LATEST", "!LATEST");
+      return fname;
+    }
+
+    private static String restoreLatestTag(String fname){
+      if (fname.contains("!LATEST"))
+        return fname.replace("!LATEST", "#LATEST");
+      return fname;
+    }
+
     @Override
     public JsonNode rewrite(JsonNode plan,
                             Set<String> namesUsed,
@@ -60,18 +72,29 @@ public class CachedFileAnalyzer implements PlanRewriter
                 for (JsonNode file : job.path("cachedFiles"))
                 {
                     String filename = file.getTextValue();
+
+                    filename = cleanLatestTag(filename);
                     URI uri = null;
+                    String path, fragment;
                     try
                     {
                         uri = new URI(filename);
+                        path = uri.getPath();
+                        path = restoreLatestTag(path);
+
+                        fragment = uri.getFragment();
+                        if (path.contains("#LATEST"))
+                        {
+                          path =
+                            FileSystemUtils.getLatestPath(fs, new Path(path))
+                            .toString();
+                          path = new URI(path).getPath();
+                        }
                     }
                     catch (URISyntaxException e)
                     {
                         throw new PlanRewriteException(e);
                     }
-
-                    String path = uri.getPath();
-                    String fragment = uri.getFragment();
 
                     // check if the fragment was already created earlier
                     if (fragment == null)
@@ -82,13 +105,7 @@ public class CachedFileAnalyzer implements PlanRewriter
                         fragment = "cached_" + (symlinkCounter++);
 
                     symlinkMap.put(path, fragment);
-
-                    if (path.contains("#LATEST"))
-                    {
-                        path =
-                                FileSystemUtils.getLatestPath(fs, new Path(path))
-                                               .toString();
-                    }
+                    
 
                     // if (fs.isDirectory(new Path(path)))
                     // {
@@ -118,6 +135,7 @@ public class CachedFileAnalyzer implements PlanRewriter
                     cachedFiles.add(path + "#" + fragment);
                 }
                 ((ObjectNode) job).put("cachedFiles", cachedFiles);
+                
             }
         }
 
@@ -129,6 +147,7 @@ public class CachedFileAnalyzer implements PlanRewriter
     static final class AddSymlinksToCachedPath extends PhysicalPlanVisitor
     {
         private final Map<String, String> map;
+        private final Configuration conf = new JobConf();
 
         AddSymlinksToCachedPath(Map<String, String> map)
         {
@@ -149,14 +168,24 @@ public class CachedFileAnalyzer implements PlanRewriter
                 try
                 {
                     String originalPath = getText(json, "path");
+                    originalPath = cleanLatestTag(originalPath);
                     URI uri = new URI(originalPath);
                     String path = uri.getPath();
+                    path = restoreLatestTag(path);
 
-                    if (map.containsKey(path))
-                    {
-                        String fragment = map.get(path);
-                        ((ObjectNode) json).put("path", path + "#" + fragment);
-                    }
+                     if (path.contains("#LATEST"))
+                     {
+                       path = 
+                         FileSystemUtils.getLatestPath(FileSystem.get(conf), new Path(path))
+                           .toString();
+                       path = new URI(path).getPath();
+                     }
+                     
+                     if (map.containsKey(path))
+                     {
+                         String fragment = map.get(path);
+                         ((ObjectNode) json).put("path", path + "#" + fragment);
+                     }
 
                 }
                 catch (URISyntaxException e)
@@ -164,7 +193,9 @@ public class CachedFileAnalyzer implements PlanRewriter
                     // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
-
+                catch (IOException e){
+                  throw new RuntimeException(e);
+                }
             }
         }
     }

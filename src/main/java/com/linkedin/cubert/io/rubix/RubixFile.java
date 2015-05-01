@@ -186,6 +186,7 @@ public class RubixFile<K, V>
     {
         if (keyData == null)
             getKeyData();
+
         if (!metadataJson.has("serializationType"))
             return BlockSerializationType.DEFAULT;
 
@@ -208,6 +209,9 @@ public class RubixFile<K, V>
     public List<KeyData<K>> getKeyData() throws IOException,
             ClassNotFoundException
     {
+        if (keyData != null)
+            return keyData;
+
         final FileSystem fs = FileSystem.get(conf);
         keyData = new ArrayList<KeyData<K>>();
 
@@ -278,102 +282,110 @@ public class RubixFile<K, V>
         return keyData;
     }
 
-    private static void extract(RubixFile<Tuple, Object> rfile,
-                                KeyData<Tuple> keyData,
-                                String output) throws IOException,
-            InstantiationException,
-            IllegalAccessException,
-            ClassNotFoundException
-    {
-        final int BUF_SIZE = 32 * 1024;
-
-        Configuration conf = new JobConf();
-        File outFile = new File(output);
-        if (outFile.exists())
-            outFile.delete();
-        outFile.createNewFile();
-
-        long offset = keyData.getOffset();
-        long length = keyData.getLength();
-        Tuple key = keyData.getKey();
-
-        print.f("Extracting block %d (off=%d len=%d) from %s",
-                keyData.getBlockId(),
-                offset,
-                length,
-                rfile.path.toString());
-
-        BufferedOutputStream bos =
-                new BufferedOutputStream(new FileOutputStream(outFile));
-
-        // copy the data
-        if (length > 0)
-        {
-            FileSystem fs = FileSystem.get(conf);
-            FSDataInputStream in = fs.open(rfile.path);
-            in.seek(offset);
-
-            byte[] data = new byte[BUF_SIZE];
-            long toRead = length;
-            while (toRead > 0)
-            {
-                int thisRead = toRead > BUF_SIZE ? BUF_SIZE : (int) toRead;
-                in.readFully(data, 0, thisRead);
-                bos.write(data, 0, thisRead);
-                toRead -= thisRead;
-                System.out.print(".");
-            }
-            System.out.println();
-        }
-        // copy the key section
-        ByteArrayOutputStream keySectionStream = new ByteArrayOutputStream();
-        DataOutput keySectionOut = new DataOutputStream(keySectionStream);
-        SerializationFactory serializationFactory = new SerializationFactory(conf);
-        Serializer<Tuple> keySerializer =
-                serializationFactory.getSerializer(rfile.getKeyClass());
-        keySerializer.open(keySectionStream);
-
-        keySerializer.serialize(key);
-        keySectionOut.writeLong(0); // position
-        keySectionOut.writeLong(keyData.getBlockId());
-        keySectionOut.writeLong(keyData.getNumRecords());
-
-        byte[] trailerBytes = keySectionStream.toByteArray();
-
-        JsonNode json = JsonUtils.cloneNode(rfile.metadataJson);
-        ((ObjectNode) json).put("numberOfBlocks", 1);
-
-        DataOutput out = new DataOutputStream(bos);
-        out.writeUTF(json.toString());
-        out.writeInt(trailerBytes.length);
-        out.write(trailerBytes);
-        out.writeLong(length); // trailer start offset
-        bos.close();
-    }
-
     private static void extract(List<RubixFile<Tuple, Object>> rfiles,
-                                long blockId,
+                                long blockId, int numBlocks,
                                 String output) throws IOException,
             ClassNotFoundException,
             InstantiationException,
             IllegalAccessException
     {
-        for (RubixFile<Tuple, Object> rfile : rfiles)
-        {
-            print.f("Checking %s", rfile.path.toString());
-            List<KeyData<Tuple>> keyDataList = rfile.getKeyData();
-            for (KeyData<Tuple> keyData : keyDataList)
+          Configuration conf = new JobConf();
+          File outFile = new File(output);
+          if (outFile.exists())
+          {
+              outFile.delete();
+          }
+          outFile.createNewFile();
+          BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(outFile));
+          ByteArrayOutputStream keySectionStream = new ByteArrayOutputStream();
+          DataOutput keySectionOut = new DataOutputStream(keySectionStream);
+          SerializationFactory serializationFactory = new SerializationFactory(conf);
+          RubixFile<Tuple,Object> lastrFile = null;
+          JsonNode json;
+          long totalLength = 0;
+
+          final int BUF_SIZE = 32 * 1024;
+          long blockIds[] = new long[numBlocks];
+          int foundBlocks = 0;
+
+          for(int i=0;i<numBlocks;i++)
+            blockIds[i] = blockId+i;
+
+          for(int i=0;i<numBlocks;i++)
+          {
+            boolean found = false;
+            for (RubixFile<Tuple, Object> rfile : rfiles)
             {
-                if (keyData.getBlockId() == blockId)
-                {
-                    extract(rfile, keyData, output);
-                    return;
-                }
-            }
+              print.f("Checking %s", rfile.path.toString());
+              List<KeyData<Tuple>> keyDataList = rfile.getKeyData();
+              for (KeyData<Tuple> keyData : keyDataList)
+              {
+                  if (keyData.getBlockId() == blockIds[i])
+                  {
+                    long offset = keyData.getOffset();
+                    long length = keyData.getLength();
+                    Tuple key = keyData.getKey();
+                    print.f("Extracting block %d (off=%d len=%d) from %s",
+                        keyData.getBlockId(),
+                        offset,
+                        length,
+                        rfile.path.toString());
+
+                 // copy the data
+                    if (length > 0)
+                    {
+                        FileSystem fs = FileSystem.get(conf);
+                        FSDataInputStream in = fs.open(rfile.path);
+                        in.seek(offset);
+
+                        byte[] data = new byte[BUF_SIZE];
+                        long toRead = length;
+                        while (toRead > 0)
+                        {
+                            int thisRead = toRead > BUF_SIZE ? BUF_SIZE : (int) toRead;
+                            in.readFully(data, 0, thisRead);
+                            bos.write(data, 0, thisRead);
+                            toRead -= thisRead;
+                            System.out.print(".");
+                        }
+                        System.out.println();
+                    }
+                    // copy the key section
+                    Serializer<Tuple> keySerializer =
+                        serializationFactory.getSerializer(rfile.getKeyClass());
+                    keySerializer.open(keySectionStream);
+
+                    keySerializer.serialize(key);
+                    keySectionOut.writeLong(totalLength); // position
+                    keySectionOut.writeLong(keyData.getBlockId());
+                    keySectionOut.writeLong(keyData.getNumRecords());
+                    foundBlocks++;
+                    totalLength += length;
+                    lastrFile = rfile;
+
+                    found = true;
+                    break;
+
+                  }
+              }
+              if(found){
+                break;
+              }
+          }
+          if(!found)
+            System.err.println("Cannot locate block with id " + blockIds[i]);
         }
+        byte[] trailerBytes = keySectionStream.toByteArray();
 
-        System.err.println("Cannot locate block with id " + blockId);
+        json = JsonUtils.cloneNode(lastrFile.metadataJson);
+        ((ObjectNode) json).put("numberOfBlocks", foundBlocks);
 
+        DataOutput out = new DataOutputStream(bos);
+        out.writeUTF(json.toString());
+        out.writeInt(trailerBytes.length);
+        out.write(trailerBytes);
+        out.writeLong(totalLength); // trailer start offset
+        bos.close();
     }
 
     private static void dumpAvro(List<RubixFile<Tuple, Object>> rfiles, String output) throws IOException,
@@ -544,7 +556,8 @@ public class RubixFile<K, V>
         options.addOption("d",
                           "dump",
                           false,
-                          "dump the contents of the rubix file. Use -f for specifying format, and -o for specifying output location");
+                          "dump the contents of the rubix file. Use -f for specifying format, and -o for specifying "
+                          + "output location");
         options.addOption("f",
                           "format",
                           true,
@@ -552,7 +565,8 @@ public class RubixFile<K, V>
         options.addOption("e",
                           "extract",
                           true,
-                          "Extract one rubix block matching the block id. Use -o for specifying output location");
+                          "Extract one or more rubix blocks starting from the given blockId. Use -e blockId,numBlocks "
+                          + "for specifying the blocks to be extracted. Use -o for specifying output location");
         options.addOption("o", true, "Store the output at the specified location");
 
         CommandLineParser parser = new BasicParser();
@@ -661,10 +675,34 @@ public class RubixFile<K, V>
                 return;
             }
         }
-        else if (line.hasOption("e")) // extract one rubix block
+        // extract arguments: -e blockId,numBlocks(contiguous) -o ouputLocation
+        else if (line.hasOption("e"))
         {
-            long blockId = Long.parseLong(line.getOptionValue("e"));
-            extract(rfiles, blockId, line.getOptionValue("o"));
+            String extractArguments = line.getOptionValue("e");
+            String outputLocation;
+            if(line.hasOption("o"))
+            {
+              outputLocation = line.getOptionValue("o");
+            }
+            else
+            {
+              System.err.println("Need to specify the location to store the output");
+              return;
+            }
+            long blockId;
+            int numBlocks = 1;
+            if(extractArguments.contains(","))
+            {
+              String[] splitExtractArgs = extractArguments.split(",");
+              blockId = Long.parseLong(splitExtractArgs[0]);
+              numBlocks = Integer.parseInt(splitExtractArgs[1]);
+            }
+            else
+            {
+              blockId = Long.parseLong(extractArguments);
+            }
+
+            extract(rfiles, blockId, numBlocks, outputLocation);
         }
         else
         // print summary

@@ -125,4 +125,30 @@ public class SchemaUtils
 
     }
 
+    public static BlockSchema getWiderSchema(BlockSchema schema1, BlockSchema schema2)
+    {
+        /// require that the schemas are "consistent"
+        // schema1.equalsIgnoreNumeric(schema2)) must be satisfied
+
+        ColumnType[] ctypes = new ColumnType[schema1.getNumColumns()];
+        for (int i = 0; i < ctypes.length; i++)
+        {
+            ColumnType type1 = schema1.getColumnType(i);
+            ColumnType type2 = schema2.getColumnType(i);
+
+            if (type1.getType().isNumerical() && type2.getType().isNumerical())
+            {
+                ctypes[i] = new ColumnType(type1.getName(),
+                                           com.linkedin.cubert.block.DataType.getWiderType(type1.getType(), type2.getType()));
+            }
+            else
+            {
+                ctypes[i] = type1;
+            }
+        }
+
+        return new BlockSchema(ctypes);
+
+    }
+
 }

@@ -23,16 +23,17 @@ import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.map.JsonMappingException;
 
 import com.linkedin.cubert.block.Block;
 import com.linkedin.cubert.block.BlockProperties;
 import com.linkedin.cubert.block.BlockSchema;
 import com.linkedin.cubert.block.ColumnType;
+import com.linkedin.cubert.memory.ColumnarTupleStore;
+import com.linkedin.cubert.memory.LookUpTable;
 import com.linkedin.cubert.utils.JsonUtils;
 import com.linkedin.cubert.utils.MemoryStats;
 import com.linkedin.cubert.utils.SerializedTupleStore;
+import com.linkedin.cubert.utils.TupleStore;
 import com.linkedin.cubert.utils.print;
 
 public class HashJoinOperator implements TupleOperator
@@ -60,10 +61,12 @@ public class HashJoinOperator implements TupleOperator
     int outputCounter = 0;
 
     Tuple output;
-    BlockSchema schema;
 
     String[] leftBlockColumns = null;
     String[] rightBlockColumns = null;
+
+    private int nLeftColumns  = -1;
+    private int nRightColumns = -1;
 
     private boolean isLeftJoin = false;
     private boolean isRightJoin = false;
@@ -109,6 +112,9 @@ public class HashJoinOperator implements TupleOperator
 
         BlockSchema leftSchema = leftBlock.getProperties().getSchema();
         BlockSchema rightSchema = rightBlock.getProperties().getSchema();
+
+        nLeftColumns = leftSchema.getNumColumns();
+        nRightColumns = rightSchema.getNumColumns();
 
         if (root.has("joinKeys"))
         {
@@ -226,13 +232,13 @@ public class HashJoinOperator implements TupleOperator
     Tuple constructJoinTuple(Tuple leftTuple, Tuple rightTuple) throws ExecException
     {
         int idx = 0;
-        for (Object field : leftTuple.getAll())
+        for (int i = 0; i < nLeftColumns; i++)
         {
-            output.set(idx++, field);
+            output.set(idx++, leftTuple.get(i));
         }
-        for (Object field : rightTuple.getAll())
+        for (int i = 0; i < nRightColumns; i++)
         {
-            output.set(idx++, field);
+            output.set(idx++, rightTuple.get(i));
         }
 
         return output;
@@ -324,10 +330,23 @@ public class HashJoinOperator implements TupleOperator
     private void createHashTable() throws IOException,
             InterruptedException
     {
-        long start, end;
+        final TupleStore store;
+        final boolean isColumnar = PhaseContext.getConf().getBoolean("cubert.use.hashjoin.storage.columnar", false);
+
+        final long start, end;
         start = System.currentTimeMillis();
-        SerializedTupleStore store =
-                new SerializedTupleStore(rightBlock.getProperties().getSchema(), rightBlockColumns);
+        if (isColumnar)
+        {
+            boolean useDictEncodedStrings =
+                    (PhaseContext.isIntialized()
+                     && PhaseContext.getConf().getBoolean("cubert.columnar.storage.encode.strings", false));
+
+            store = new ColumnarTupleStore(rightBlock.getProperties().getSchema(), useDictEncodedStrings);
+        }
+        else
+        {
+            store = new SerializedTupleStore(rightBlock.getProperties().getSchema(), rightBlockColumns);
+        }
 
         int count = 0;
         Tuple t;
@@ -337,14 +356,20 @@ public class HashJoinOperator implements TupleOperator
             ++count;
         }
         end = System.currentTimeMillis();
-        print.f("HashJoinOperator: Serialized %d entries in %d ms", count, (end - start));
+        print.f("HashJoinOperator: Added %d entries to store in %d ms", count, (end - start));
 
         /* Create the Hash Table */
-        rightBlockHashTable = store.getHashTable();
-
-        /* Drop the start offsets. This is to be done AFTER creating the Hash Table since, creation requires random
-         * access to the store. */
-        store.dropIndex();
+        if (isColumnar)
+        {
+            rightBlockHashTable = new LookUpTable(store, rightBlockColumns);
+        }
+        else
+        {
+            rightBlockHashTable = ((SerializedTupleStore) store).getHashTable();
+            /* Drop the start offsets. This is to be done AFTER creating the Hash Table since, creation requires random
+             * access to the store. */
+            ((SerializedTupleStore) store).dropIndex();
+        }
     }
 
     @SuppressWarnings("serial")

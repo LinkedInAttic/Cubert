@@ -36,10 +36,11 @@ import com.linkedin.cubert.utils.print;
 
 public class RubixRecordReader<K, V> extends RecordReader<K, V>
 {
+    private BlockInputStream blockInputStream;
     private InputStream in;
     private K key;
     private long length;
-    private final int bytesRead = 0;
+    private long bytesRead = 0;
     private long offset = 0;
 
     private Deserializer<V> valueDeserializer;
@@ -90,7 +91,9 @@ public class RubixRecordReader<K, V> extends RecordReader<K, V>
         FSDataInputStream fsin = fs.open(path);
         fsin.seek(offset);
 
-        in = new BlockInputStream(fsin, length);
+        blockInputStream = new BlockInputStream(fsin, length);
+        in = blockInputStream;
+
         CompressionCodec codec = new CompressionCodecFactory(conf).getCodec(path);
         if (codec != null)
         {
@@ -143,6 +146,7 @@ public class RubixRecordReader<K, V> extends RecordReader<K, V>
     public float getProgress() throws IOException,
             InterruptedException
     {
+        bytesRead = blockInputStream.getBytesRead();
         return (float) (1.0 * bytesRead / length);
     }
 

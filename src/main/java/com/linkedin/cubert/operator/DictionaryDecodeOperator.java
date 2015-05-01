@@ -217,14 +217,16 @@ public class DictionaryDecodeOperator implements TupleOperator
 
         ColumnType[] columnTypes = new ColumnType[numColumns];
 
-        for (int i = 0; i < columnTypes.length; i++)
+        int i = 0;
+        for (ColumnType ct : inputSchema.getColumnTypes())
         {
             ColumnType type = new ColumnType();
             columnTypes[i] = type;
 
-            type.setName(inputSchema.getName(i));
+            final String name = ct.getName();
+            type.setName(name);
 
-            if (dictionaryMap.containsKey(type.getName()))
+            if (dictionaryMap.containsKey(name))
             {
                 // this column is decoded. Transform the schema
                 type.setType(DataType.STRING);
@@ -232,8 +234,10 @@ public class DictionaryDecodeOperator implements TupleOperator
             else
             {
                 // this column is not decoded. Keep the schema intact
-                type.setType(inputSchema.getType(i));
+                type.setType(ct.getType());
+                type.setColumnSchema(ct.getColumnSchema());
             }
+            i++;
         }
 
         BlockSchema schema = new BlockSchema(columnTypes);

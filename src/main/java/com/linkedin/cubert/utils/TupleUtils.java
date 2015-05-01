@@ -11,20 +11,18 @@
 
 package com.linkedin.cubert.utils;
 
+import com.linkedin.cubert.block.BlockSchema;
+import com.linkedin.cubert.block.DataType;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.BagFactory;
 import org.apache.pig.data.DataBag;
 import org.apache.pig.data.DataByteArray;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
-
-import com.linkedin.cubert.block.BlockSchema;
-import com.linkedin.cubert.block.DataType;
 
 /**
  * Various Tuple utility methods.
@@ -104,6 +102,29 @@ public class TupleUtils
         {
             dest.set(idx++, getFieldDeepCopy(val));
         }
+    }
+
+    public static void deepCopyWithReuse(Tuple src, Tuple dest) throws ExecException
+    {
+        int idx = 0;
+        for (Object val : src.getAll())
+        {
+            deepFieldCopyWithReuse(idx++, val, dest);
+        }
+    }
+
+    public static void deepFieldCopyWithReuse(int idx, Object val, Tuple dest) throws ExecException
+    {
+        if (val instanceof Tuple)
+            deepCopyWithReuse((Tuple) val, (Tuple) dest.get(idx));
+        else if (val instanceof DataBag)
+            throw new UnsupportedOperationException("Cannot deep copy with reuse for a bag");
+        else if (val instanceof DataByteArray)
+            throw new UnsupportedOperationException("Cannot deep copy with reuse for a data byte array");
+        else if (val instanceof Map)
+            throw new UnsupportedOperationException("Cannot deep copy with reuse for a map");
+        else
+            dest.set(idx, val);
     }
 
     public static Tuple getDeepCopy(Tuple originTuple) throws ExecException

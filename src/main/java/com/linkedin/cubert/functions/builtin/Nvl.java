@@ -33,7 +33,7 @@ public class Nvl extends Function
     public Object eval(Tuple tuple) throws ExecException
     {
         Object o1 = tuple.get(0);
-        return o1 == null ? tuple.get(1) : o1;
+        return (o1 == null || (o1 instanceof String && ((String) o1).length()==0)? tuple.get(1) : o1);
     }
 
     @Override

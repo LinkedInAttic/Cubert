@@ -97,7 +97,7 @@ public class LazyTuple implements Tuple
     @Override
     public byte getType(int fieldNum) throws ExecException
     {
-        throw new UnsupportedOperationException();
+      return children[fieldNum].getType().getType().getPigDataType();
     }
 
     @Override

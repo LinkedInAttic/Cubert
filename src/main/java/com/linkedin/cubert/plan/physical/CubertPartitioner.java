@@ -26,6 +26,7 @@ import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import com.linkedin.cubert.block.BlockSchema;
+import com.linkedin.cubert.block.BlockUtils;
 import com.linkedin.cubert.utils.JsonUtils;
 import com.linkedin.cubert.utils.Pair;
 
@@ -118,9 +119,7 @@ public class CubertPartitioner<V> extends Partitioner<Tuple, V> implements Confi
         // This has to be cast to long;
         // If it is int, and the hashcode is -2147483648, negative or math.abs(), or *-1
         // of this all return negative numbers
-        long hashcode = keyTuple.hashCode();
-        if (hashcode < 0)
-            hashcode = -hashcode;
+        long hashcode = BlockUtils.getBlockId(keyTuple);
 
         return (int) (hashcode % numPartitions);
     }

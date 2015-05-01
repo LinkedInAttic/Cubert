@@ -65,6 +65,7 @@ public class FunctionFactory
         case DIVIDE:
         case MOD:
         case LSHIFT:
+        case RSHIFT:
             return new ArithmeticFunction(type);
         case NOT:
         case IS_NULL:
@@ -79,6 +80,8 @@ public class FunctionFactory
         case GT:
         case GE:
             return new BooleanFunction(type);
+        case IsDistinct:
+            return new IsDistinct();
         case MATCHES:
             return new Match();
         case NVL:
@@ -95,6 +98,8 @@ public class FunctionFactory
             return new Typecast(DataType.STRING);
         case SIZEOF:
             return new Sizeof();
+        case TOBYTEARRAY:
+            return new ToByteArray();
         case CASE:
             return new Case();
         case CONCAT:

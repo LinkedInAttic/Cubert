@@ -15,6 +15,7 @@ import com.linkedin.cubert.io.avro.AvroStorage;
 import com.linkedin.cubert.io.rubix.RubixStorage;
 import com.linkedin.cubert.io.shuffle.ShuffleStorage;
 import com.linkedin.cubert.io.text.TextStorage;
+import com.linkedin.cubert.io.virtual.VirtualStorage;
 import com.linkedin.cubert.utils.ClassCache;
 
 public final class StorageFactory
@@ -34,25 +35,26 @@ public final class StorageFactory
         if (type.equalsIgnoreCase("SHUFFLE"))
             return new ShuffleStorage();
 
+        if (type.equalsIgnoreCase("VIRTUAL"))
+            return new VirtualStorage();
+
         // if not built-in, it may be a path to external class
         try
         {
-            Class<? extends Storage> cls = ClassCache.forName(type).asSubclass(Storage.class);
+            Class<? extends Storage> cls =
+                    ClassCache.forName(type).asSubclass(Storage.class);
             return cls.newInstance();
         }
         catch (ClassNotFoundException e)
         {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
         catch (InstantiationException e)
         {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
         catch (IllegalAccessException e)
         {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
 

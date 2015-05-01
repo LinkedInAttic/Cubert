@@ -11,26 +11,25 @@
 
 package com.linkedin.cubert.block;
 
+import com.linkedin.cubert.utils.TupleUtils;
 import java.io.IOException;
-
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.codehaus.jackson.JsonNode;
 
-import com.linkedin.cubert.utils.TupleUtils;
-
 /**
  * Provides pivoting on a block.
- * 
+ *
  * The data can be iterated simply via the next() method, or in pivot key aware fashion
  * via the nextPivoted() method.
- * 
+ *
  * @author Maneesh Varshney
- * 
+ *
  */
 public class PivotedBlock implements Block
 {
     private final Block block;
+//    private final TupleCopier tupleCopier;
     private Tuple current = null;
     private Tuple prev;
     private boolean firstTupleInAdvance = true;
@@ -47,12 +46,12 @@ public class PivotedBlock implements Block
         if (pivotColumns == null || pivotColumns.length == 0)
             throw new IllegalArgumentException("Pivot columns are not specified");
 
-        prev =
-                TupleFactory.getInstance().newTuple(block.getProperties()
-                                                         .getSchema()
-                                                         .getNumColumns());
+        BlockSchema schema = block.getProperties().getSchema();
+        comparator = new TupleComparator(schema, pivotColumns);
 
-        comparator = new TupleComparator(block.getProperties().getSchema(), pivotColumns);
+//        tupleCopier = new TupleCopier(schema);
+//        prev = tupleCopier.newTuple();
+        prev = TupleFactory.getInstance().newTuple(schema.getNumColumns());
     }
 
     @Override
@@ -102,7 +101,7 @@ public class PivotedBlock implements Block
 
         firstTupleInAdvance = false;
 
-        TupleUtils.copy(current, prev);
+        TupleUtils.deepCopy(current, prev);
 
         return current;
     }

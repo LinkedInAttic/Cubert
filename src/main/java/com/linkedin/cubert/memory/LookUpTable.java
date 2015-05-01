@@ -13,12 +13,7 @@
 package com.linkedin.cubert.memory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import org.apache.hadoop.util.IndexedSortable;
 import org.apache.hadoop.util.QuickSort;
@@ -87,7 +82,10 @@ public class LookUpTable implements Map<Tuple, List<Tuple>>
         offsetArr = store.getOffsets();
         Arrays.fill(hashCodeArr, -1);
 
-        sortable = new CachedIndexedSortable();
+        if (store instanceof ColumnarTupleStore)
+            sortable = new ColumnarIndexedSortable();
+        else
+            sortable = new CachedIndexedSortable();
         buildTable();
     }
 
@@ -107,7 +105,10 @@ public class LookUpTable implements Map<Tuple, List<Tuple>>
 
         /* Sort the offsets array */
         start = System.currentTimeMillis();
-        quickSort.sort(sortable, 0, offsetArr.length);
+        if (offsetArr.length > 1)
+        {
+            quickSort.sort(sortable, 0, offsetArr.length);
+        }
         end = System.currentTimeMillis();
         print.f("LookUpTable: Sorted %d entries in %d ms", offsetArr.length, (end - start));
 
@@ -233,6 +234,8 @@ public class LookUpTable implements Map<Tuple, List<Tuple>>
                     tuples.add(store.getTuple(offset, null));
                 }
             }
+            if( !found)
+                return null;
             return tuples;
         }
         catch (Exception e)
@@ -257,25 +260,25 @@ public class LookUpTable implements Map<Tuple, List<Tuple>>
     private int tupleHashCode(Tuple tuple) throws ExecException
     {
         final int PRIME = 31;
-        int hashCode = 17;
+        long hashCode = 17;
         for (int idx : comparatorIndices)
         {
             hashCode = hashCode * PRIME + tuple.get(idx).hashCode();
         }
         if (hashCode < 0) hashCode = -hashCode;
-        return hashCode % hashCodeArr.length;
+        return (int) (hashCode % hashCodeArr.length);
     }
 
     private int keyHashCode(Tuple key) throws ExecException
     {
         final int PRIME = 31;
-        int hashCode = 17;
+        long hashCode = 17;
         for (int i = 0; i < key.size(); i++)
         {
             hashCode = hashCode * PRIME + key.get(i).hashCode();
         }
         if (hashCode < 0) hashCode = -hashCode;
-        return hashCode % hashCodeArr.length;
+        return (int) (hashCode % hashCodeArr.length);
     }
 
     @Override
@@ -294,7 +297,39 @@ public class LookUpTable implements Map<Tuple, List<Tuple>>
     @Override
     public Set<Tuple> keySet()
     {
-        throw new UnsupportedOperationException();
+        final int nKeyColumns = comparatorIndices.length;
+        final TupleFactory factory = TupleFactory.getInstance();
+        final Tuple reuse = newTuple();
+
+        final Set<Tuple> keys = new HashSet<Tuple>();
+        try
+        {
+            for (int offset : offsetArr)
+            {
+                /* For every new key the sign bit is set. Thus, ignore all others */
+                if (offset >= 0)
+                {
+                    continue;
+                }
+
+                /* Mask out the offset and fetch from store */
+                offset = offset & MASK;
+                store.getTuple(offset, reuse);
+
+                /* Create a key tuple and add it to the set */
+                final Tuple t = factory.newTuple(nKeyColumns);
+                for (int c = 0; c < nKeyColumns; ++c)
+                {
+                    t.set(c, reuse.get(comparatorIndices[c]));
+                }
+                keys.add(t);
+            }
+        }
+        catch (ExecException e)
+        {
+            throw new RuntimeException(e);
+        }
+        return keys;
     }
 
     @SuppressWarnings("NullableProblems")
@@ -337,6 +372,54 @@ public class LookUpTable implements Map<Tuple, List<Tuple>>
     {
         return sortable;
     }
+
+    class ColumnarIndexedSortable implements IndexedSortable
+    {
+        private Tuple t1;
+        private Tuple t2;
+
+        @Override
+        public int compare(int i, int j)
+        {
+            try
+            {
+                final int offset1 = offsetArr[i] & MASK;
+                final int offset2 = offsetArr[j] & MASK;
+
+                t1 = store.getTuple(offset1, t1);
+                t2 = store.getTuple(offset2, t2);
+
+                /* t1 - t2 => ascending */
+                int result = tupleHashCode(t1) - tupleHashCode(t2);
+                if (result != 0) return result;
+
+                for (int idx : comparatorIndices)
+                {
+                    Comparable a = (Comparable) t1.get(idx);
+                    Comparable b = (Comparable) t2.get(idx);
+
+                    /* ascending */
+                    result = a.compareTo(b);
+                    if (result != 0) return result;
+                }
+                return 0;
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public void swap(int i, int j)
+        {
+            int temp = offsetArr[i];
+            offsetArr[i] = offsetArr[j];
+            offsetArr[j] = temp;
+        }
+    }
+
 
     /**
     * Created by spyne on 10/15/14.
@@ -425,7 +508,8 @@ public class LookUpTable implements Map<Tuple, List<Tuple>>
                     if (result != 0) return result;
                 }
                 return 0;
-            } catch (IOException e)
+            }
+            catch (IOException e)
             {
                 e.printStackTrace();
                 throw new RuntimeException(e);

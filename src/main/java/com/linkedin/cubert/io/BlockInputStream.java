@@ -18,11 +18,13 @@ public class BlockInputStream extends InputStream
 {
     private final InputStream in;
     private long remaining;
+    private final long blocksize;
 
     public BlockInputStream(InputStream in, long blocksize)
     {
         this.in = in;
         this.remaining = blocksize;
+        this.blocksize = blocksize;
     }
 
     @Override
@@ -108,5 +110,10 @@ public class BlockInputStream extends InputStream
     public boolean markSupported()
     {
         return in.markSupported();
+    }
+
+    public long getBytesRead()
+    {
+        return (blocksize - remaining);
     }
 }

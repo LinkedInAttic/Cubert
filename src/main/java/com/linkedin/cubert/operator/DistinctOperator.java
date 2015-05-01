@@ -11,49 +11,58 @@
 
 package com.linkedin.cubert.operator;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Map;
-
-import org.apache.pig.data.Tuple;
-import org.apache.pig.data.TupleFactory;
-import org.codehaus.jackson.JsonNode;
-
 import com.linkedin.cubert.block.Block;
 import com.linkedin.cubert.block.BlockProperties;
 import com.linkedin.cubert.block.BlockSchema;
 import com.linkedin.cubert.block.PivotedBlock;
+import com.linkedin.cubert.utils.TupleUtils;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Map;
+import org.apache.pig.data.Tuple;
+import org.apache.pig.data.TupleFactory;
+import org.codehaus.jackson.JsonNode;
+
 
 public class DistinctOperator implements TupleOperator
 {
     private PivotedBlock pivotedBlock;
     private Tuple outputTuple;
     private boolean hasMore = true;
+//    private TupleCopier tupleCopier;
 
     @Override
-    public void setInput(Map<String, Block> input, JsonNode json, BlockProperties props) throws IOException,
-            InterruptedException
+    public void setInput(Map<String, Block> input, JsonNode json, BlockProperties props)
+        throws IOException, InterruptedException
     {
         Block inputBlock = input.values().iterator().next();
 
         BlockSchema schema = inputBlock.getProperties().getSchema();
-        outputTuple = TupleFactory.getInstance().newTuple(schema.getNumColumns());
         pivotedBlock = new PivotedBlock(inputBlock, schema.getColumnNames());
+
+//        tupleCopier = new TupleCopier(schema);
+//        outputTuple = tupleCopier.newTuple();
+        outputTuple = TupleFactory.getInstance().newTuple(schema.getNumColumns());
     }
 
     @Override
-    public Tuple next() throws IOException,
-            InterruptedException
+    public Tuple next()
+        throws IOException, InterruptedException
     {
         if (!hasMore)
+        {
             return null;
+        }
 
         Tuple tuple = pivotedBlock.next();
         if (tuple == null)
+        {
             return null;
+        }
 
-        for (int i = 0; i < tuple.size(); i++)
-            outputTuple.set(i, tuple.get(i));
+        // TODO: use copiers. For now using deep copy API. Will degenerate to copy if columns are shallow copiable.
+        // tupleCopier.copy(tuple, outputTuple);
+        TupleUtils.deepCopy(tuple, outputTuple);
 
         while (pivotedBlock.next() != null)
         {
@@ -65,18 +74,17 @@ public class DistinctOperator implements TupleOperator
     }
 
     @Override
-    public PostCondition getPostCondition(Map<String, PostCondition> preConditions,
-                                          JsonNode json) throws PreconditionException
+    public PostCondition getPostCondition(Map<String, PostCondition> preConditions, JsonNode json)
+        throws PreconditionException
     {
         PostCondition condition = preConditions.values().iterator().next();
         String[] columns = condition.getSchema().getColumnNames();
 
-        if (condition.getSortKeys() == null
-                || condition.getSortKeys().length != columns.length)
-            throw new PreconditionException(PreconditionExceptionType.INVALID_SORT_KEYS,
-                                            String.format("Columns=%s Sorted=%s",
-                                                          Arrays.toString(columns),
-                                                          Arrays.toString(condition.getSortKeys())));
+        if (condition.getSortKeys() == null || condition.getSortKeys().length != columns.length)
+        {
+            throw new PreconditionException(PreconditionExceptionType.INVALID_SORT_KEYS, String
+                .format("Columns=%s Sorted=%s", Arrays.toString(columns), Arrays.toString(condition.getSortKeys())));
+        }
 
         return preConditions.values().iterator().next();
     }

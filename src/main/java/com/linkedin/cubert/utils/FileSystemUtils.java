@@ -14,6 +14,8 @@ package com.linkedin.cubert.utils;
 import static com.linkedin.cubert.utils.JsonUtils.getText;
 
 import java.io.IOException;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,6 +24,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ArrayNode;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 /**
  * Utility methods to enumerate paths in the file system.
@@ -31,18 +36,23 @@ import org.codehaus.jackson.node.ArrayNode;
  */
 public class FileSystemUtils
 {
-    public static List<Path> getPaths(FileSystem fs, JsonNode json) throws IOException
+
+     public static List<Path> getPaths(FileSystem fs, JsonNode json, JsonNode params) throws IOException {
+      return getPaths(fs, json, false, params);
+    }
+
+    public static List<Path> getPaths(FileSystem fs, JsonNode json,
+                                      boolean schemaOnly, JsonNode params) throws IOException
     {
         if (json.isArray())
         {
             List<Path> paths = new ArrayList<Path>();
-
             // If the specified input is array, recursively get paths for each item in the
             // array
             ArrayNode anode = (ArrayNode) json;
             for (int i = 0; i < anode.size(); i++)
             {
-                paths.addAll(getPaths(fs, json.get(i)));
+                paths.addAll(getPaths(fs, json.get(i), params));
             }
             return paths;
         }
@@ -53,69 +63,133 @@ public class FileSystemUtils
         else
         {
             List<Path> paths = new ArrayList<Path>();
-
             Path root = new Path(getText(json, "root"));
+            Path basePath = root;
             JsonNode startDateJson = json.get("startDate");
+            if (schemaOnly && json.get("origStartDate") != null)
+              startDateJson = json.get("origStartDate");
+
             JsonNode endDateJson = json.get("endDate");
-            long startDuration =
-                    (startDateJson.isTextual())
-                            ? Long.parseLong(startDateJson.getTextValue())
-                            : startDateJson.getLongValue();
-            long endDuration =
-                    (endDateJson.isTextual())
-                            ? Long.parseLong(endDateJson.getTextValue())
-                            : endDateJson.getLongValue();
-
-            boolean isDaily;
-            if (Long.toString(startDuration).length() == 8)
+            if(startDateJson == null || endDateJson == null)
             {
-                if (Long.toString(endDuration).length() != 8)
-                    throw new IllegalArgumentException("EndDate " + endDuration
-                            + " is not consistent with StartDate " + startDuration);
-
-                isDaily = true;
+                throw new IllegalArgumentException("StartDate and endDate need to be specified");
             }
-            else if (Long.toString(startDuration).length() == 10)
+            String startDuration, endDuration;
+            if(startDateJson.isTextual())
             {
-                if (Long.toString(endDuration).length() != 10)
+                startDuration = startDateJson.getTextValue();
+                endDuration = endDateJson.getTextValue();
+            }
+
+            else
+            {
+                startDuration = startDateJson.toString();
+                endDuration = endDateJson.toString();
+            }
+
+            boolean errorOnMissing = false;
+            JsonNode errorOnMissingJson = params.get("errorOnMissing");
+            if(errorOnMissingJson != null)
+                errorOnMissing = Boolean.parseBoolean(errorOnMissingJson.getTextValue());
+
+            boolean useHourlyForMissingDaily = false;
+            JsonNode useHourlyForMissingDailyJson = params.get("useHourlyForMissingDaily");
+            if(useHourlyForMissingDailyJson != null)
+                useHourlyForMissingDaily = Boolean.parseBoolean(useHourlyForMissingDailyJson.getTextValue());
+
+
+            DateTimeFormatter dtf = DateTimeFormat.forPattern("yyyyMMdd");
+            DateTimeFormatter dtfwHour = DateTimeFormat.forPattern("yyyyMMddHH");
+            DateTime startDate, endDate;
+            boolean isDaily;
+            int hourStep;
+            if (startDuration.length() == 8)
+            {
+                if (endDuration.length() != 8)
                     throw new IllegalArgumentException("EndDate " + endDuration
                             + " is not consistent with StartDate " + startDuration);
+                startDate = dtf.parseDateTime(startDuration);
+                endDate = dtf.parseDateTime(endDuration);
+                isDaily = true;
+                hourStep = 24;
+            }
+            else if (startDuration.length() == 10)
+            {
+                if (endDuration.length() != 10)
+                    throw new IllegalArgumentException("EndDate " + endDuration
+                            + " is not consistent with StartDate " + startDuration);
+                startDate = dtfwHour.parseDateTime(startDuration);
+                endDate = dtfwHour.parseDateTime(endDuration);
                 isDaily = false;
+                hourStep = 1;
             }
             else
             {
                 throw new IllegalArgumentException("Cannot parse StartDate "
                         + startDuration + " as daily or hourly duration");
+
             }
 
-            for (Path path : getPaths(fs, root))
+            for(Path path: getPaths(fs,root))
             {
-                if (isDaily)
-                    paths.addAll(getDailyDurationPaths(fs,
-                                                       path,
-                                                       startDuration,
-                                                       endDuration));
+                if(isDaily)
+                {
+                    if(path.getName().equals("daily"))
+                        basePath = path;
+                    else
+                        basePath = new Path(path, "daily");
+                }
                 else
-                    paths.addAll(getHourlyDurationPaths(fs,
-                                                        path,
-                                                        startDuration,
-                                                        endDuration));
+                {
+                    if(path.getName().equals("hourly"))
+                        basePath = path;
+                    else
+                        basePath = new Path(path, "hourly");
+                }
+
+                //If daily folder itself doesn't exist
+                if (!fs.exists(basePath) && isDaily && useHourlyForMissingDaily &&
+                        fs.exists(new Path(basePath.getParent(), "hourly"))) {
+                    basePath = new Path(basePath.getParent(), "hourly");
+                    endDate = endDate.plusHours(23);
+                    isDaily = false;
+                    hourStep = 1;
+                }
+
+                paths.addAll(getDurationPaths(fs,
+                        basePath,
+                        startDate,
+                        endDate,
+                        isDaily,
+                        hourStep,
+                        errorOnMissing,
+                        useHourlyForMissingDaily));
             }
 
-            if (paths.isEmpty())
-                throw new IOException(String.format("No input files at %s from %d to %d",
-                                                    root.toString(),
+            if (paths.isEmpty() && schemaOnly)
+                throw new IOException(String.format("No input files at %s from %s to %s",
+                                                    basePath.toString(),
                                                     startDuration,
                                                     endDuration));
-
             return paths;
         }
 
     }
 
+    private static Path generateDatedPath(Path base, int year, int month, int day) {
+        return generateDatedPath(base, year, month, day, -1);
+    }
+
+    private static Path generateDatedPath(Path base, int year, int month, int day, int hour) {
+        NumberFormat nf2 = new DecimalFormat("00");
+        return new Path(base, hour != -1 ? nf2.format(year) + "/" + nf2.format(month) + "/" + nf2.format(day) + "/"
+                + nf2.format(hour) : nf2.format(year) + "/" + nf2.format(month) + "/" + nf2.format(day));
+    }
+
     public static List<Path> getPaths(FileSystem fs, Path path) throws IOException
     {
         List<Path> paths = new ArrayList<Path>();
+
 
         String pathStr = path.toString();
 
@@ -178,71 +252,51 @@ public class FileSystemUtils
         return new Path(latestPath);
     }
 
-    public static List<Path> getDailyDurationPaths(FileSystem fs,
-                                                   Path root,
-                                                   long startDate,
-                                                   long endDate) throws IOException
+    public static List<Path> getDurationPaths(FileSystem fs,
+                                              Path root,
+                                              DateTime startDate,
+                                              DateTime endDate,
+                                              boolean isDaily,
+                                              int hourStep,
+                                              boolean errorOnMissing,
+                                              boolean useHourlyForMissingDaily) throws IOException
     {
         List<Path> paths = new ArrayList<Path>();
+        while (endDate.compareTo(startDate) >= 0) {
+            Path loc;
+            if (isDaily)
+                loc = generateDatedPath(root, endDate.getYear(), endDate.getMonthOfYear(), endDate.getDayOfMonth());
+            else
+                loc = generateDatedPath(root, endDate.getYear(), endDate.getMonthOfYear(), endDate.getDayOfMonth(),
+                        endDate.getHourOfDay());
 
-        for (FileStatus years : fs.listStatus(root))
-        {
-            int year = Integer.parseInt(years.getPath().getName());
-
-            for (FileStatus months : fs.listStatus(years.getPath()))
-            {
-                int month = Integer.parseInt(months.getPath().getName());
-
-                for (FileStatus days : fs.listStatus(months.getPath()))
-                {
-                    int day = Integer.parseInt(days.getPath().getName());
-
-                    long timestamp = 10000L * year + 100L * month + day;
-                    if (timestamp >= startDate && timestamp <= endDate)
-                    {
-                        paths.add(days.getPath());
-                    }
-                }
+            // Check that directory exists, and contains avro files.
+            if (fs.exists(loc) && fs.globStatus(new Path(loc, "*" + "avro")).length > 0) {
+                paths.add(loc);
             }
-        }
 
+            else {
+
+                loc = generateDatedPath(new Path(root.getParent(),"hourly"), endDate.getYear(),
+                        endDate.getMonthOfYear(), endDate.getDayOfMonth());
+                if(isDaily && useHourlyForMissingDaily && fs.exists(loc))
+                {
+                      for (FileStatus hour: fs.listStatus(loc)) {
+                          paths.add(hour.getPath());
+                      }
+                }
+
+                else if (errorOnMissing) {
+                    throw new RuntimeException("Missing directory " + loc.toString());
+                }
+
+            }
+            if (hourStep ==24)
+                endDate = endDate.minusDays(1);
+            else
+                endDate = endDate.minusHours(hourStep);
+        }
         return paths;
     }
 
-    public static List<Path> getHourlyDurationPaths(FileSystem fs,
-                                                    Path root,
-                                                    long startDateHour,
-                                                    long endDateHour) throws IOException
-    {
-        List<Path> paths = new ArrayList<Path>();
-
-        for (FileStatus years : fs.listStatus(root))
-        {
-            int year = Integer.parseInt(years.getPath().getName());
-
-            for (FileStatus months : fs.listStatus(years.getPath()))
-            {
-                int month = Integer.parseInt(months.getPath().getName());
-
-                for (FileStatus days : fs.listStatus(months.getPath()))
-                {
-                    int day = Integer.parseInt(days.getPath().getName());
-
-                    for (FileStatus hours : fs.listStatus(days.getPath()))
-                    {
-                        int hour = Integer.parseInt(hours.getPath().getName());
-
-                        long timestamp =
-                                1000000L * year + 10000L * month + 100L * day + hour;
-                        if (timestamp >= startDateHour && timestamp <= endDateHour)
-                        {
-                            paths.add(hours.getPath());
-                        }
-                    }
-                }
-            }
-        }
-
-        return paths;
-    }
 }

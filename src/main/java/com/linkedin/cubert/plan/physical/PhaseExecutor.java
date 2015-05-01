@@ -360,7 +360,9 @@ public class PhaseExecutor
                                                          "input",
                                                          inputs[i],
                                                          "output",
-                                                         output));
+                                                         output,
+                                                         "schema",
+                                                         json.get("schema")));
                 }
                 // all other operators are added as is.
                 else

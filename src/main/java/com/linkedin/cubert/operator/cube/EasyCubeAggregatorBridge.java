@@ -66,6 +66,16 @@ public class EasyCubeAggregatorBridge implements DupleCubeAggregator
     }
 
     @Override
+    public void clear()
+    {
+        int size = buffer.length;
+        for (int i = 0; i < size; i++)
+        {
+            buffer[i] = delegate.getAggregationBuffer();
+        }
+    }
+
+    @Override
     public void processTuple(Tuple tuple) throws ExecException
     {
         delegate.processTuple(tuple);
@@ -103,6 +113,8 @@ public class EasyCubeAggregatorBridge implements DupleCubeAggregator
         // return new PostCondition(delegate.outputSchema(inputSchema), null, null);
         return null;
     }
+
+
 
     @Override
     public void innerAggregate(int index)

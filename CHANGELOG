@@ -1,3 +1,33 @@
+Cubert v0.2.21
+--------------
+[NEW] In memory columnar store now supports new column types: float, short, dictionary encoded strings and bags.
+[NEW] Cubert now reports max/min/avg/median Mappers and Reducers time.
+[NEW] Reduce-Side Join operator
+[NEW] IsDistinct UDF added, that uses a HashSet to determine if the value is distinct.
+[NEW] Can run multiple in a script from command line by providing multiple -x options
+[NEW] In-memory columnar storage for tuples with primitive data types
+[NEW] VIRTUAL input format that is not backed by filesystem
+[FEATURE] Support ability to specify a user-defined shuffle rewriter
+[FEATURE] Hadoop configuration properties can be specified for individual jobs
+[FEATURE] PIVOT operator supports pivoting by number of rows
+[FEATURE] TEE operator supports WITH SPLIT option to filter out the TEE'ed tuples
+[FEATURE] CUBE operator supports boolean dimensions
+[FEATURE] BLOCKGEN BY INDEX now uses round-robin assignment of blocks to reducers.
+[FEATURE] VIRTUAL input storage now supports reporting progress.
+[FEATURE] TEE writers (AVRO and TEXT) now supports compression.
+[FEATURE] Map and Array types are handled correctly in AvroStorage.
+[FEATURE] LOAD-CACHED operator supports "#LATEST" tag in path names
+[FEATURE] On script compilation errors, Cubert throws an exception rather than exiting
+[FEATURE] Cube operator has configurable hashtable size and flush threshold
+[FEATURE] rubixtool can extract one block
+[FEATURE] Caching Class.forName()
+[BUG] Control characters as separator for TEXT writers are handled properly.
+[BUG] CUBE operator: when flushing hash table, the values were not reset to initial values.
+[BUG] The schemas from multi mappers are validated by the Semantic Analyzer.
+[BUG] LazyTuple was not reporting field type correctly.
+[BUG] BLOCKGEN BY INDEX now correctly handles keys whose hash code is Integer.MIN_VALUE
+[BUG] RUBIX input format was not reporting progress correctly
+
 Cubert v0.2.0
 ---------------
 [NEW] Can use user-provided implementation of sort algorithm (the default is java.utils.Collections.sort)
