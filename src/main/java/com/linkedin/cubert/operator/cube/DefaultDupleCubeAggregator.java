@@ -11,6 +11,9 @@
 
 package com.linkedin.cubert.operator.cube;
 
+import com.linkedin.cubert.memory.LongArrayList;
+
+
 /**
  * Builtin default implementation of a {@link DupleCubeAggregator} that aggregates input
  * columns using inner and outer {@link ValueAggregator}.
@@ -30,22 +33,24 @@ public final class DefaultDupleCubeAggregator extends DefaultCubeAggregator impl
     private final ValueAggregator innerAgg;
 
     // array for storing aggregated values across inner dimension
-    private long[] innerValueTable;
+    private final LongArrayList innerValueTable;
 
     public DefaultDupleCubeAggregator(ValueAggregator outerAgg, ValueAggregator innerAgg)
     {
         super(outerAgg);
         this.innerAgg = innerAgg;
+
+        innerValueTable = new LongArrayList();
+        innerValueTable.setDefaultValue(innerAgg.initialValue());
     }
 
     @Override
     public void allocate(int size)
     {
         super.allocate(size);
+
         // allocate and initialize the inner aggregation table
-        innerValueTable = new long[size];
-        for (int i = 0; i < size; i++)
-            innerValueTable[i] = innerAgg.initialValue();
+        innerValueTable.ensureCapacity(size);
     }
 
     @Override
@@ -53,9 +58,7 @@ public final class DefaultDupleCubeAggregator extends DefaultCubeAggregator impl
     {
         super.clear();
 
-        int size = innerValueTable.length;
-        for (int i = 0; i < size; i++)
-            innerValueTable[i] = innerAgg.initialValue();
+        innerValueTable.reset();
     }
 
     @Override
@@ -64,21 +67,25 @@ public final class DefaultDupleCubeAggregator extends DefaultCubeAggregator impl
         if (currentValue == null)
             return;
 
-        innerValueTable[index] = innerAgg.aggregate(innerValueTable[index], currentValue);
+        innerValueTable.ensureCapacity(index);
+
+        final long previousValue = innerValueTable.getLong(index);
+        innerValueTable.updateLong(index, innerAgg.aggregate(previousValue, currentValue));
     }
 
     @Override
     public void aggregate(int index)
     {
         // obtain the inner aggregate value
-        Object innerVal = innerAgg.output(innerValueTable[index]);
+        Object innerVal = innerAgg.output(innerValueTable.getLong(index));
+
         // reset it to initial value again
-        innerValueTable[index] = innerAgg.initialValue();
+        innerValueTable.updateLong(index, innerAgg.initialValue());
 
         if (innerVal == null)
             return;
         // aggregate the "outer" aggregation table
-        valueTable[index] = aggregator.aggregate(valueTable[index], innerVal);
+        valueTable.updateLong(index, aggregator.aggregate(valueTable.getLong(index), innerVal));
     }
 
 }

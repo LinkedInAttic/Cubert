@@ -11,22 +11,24 @@
 
 package com.linkedin.cubert.utils;
 
-import static com.linkedin.cubert.utils.JsonUtils.getText;
-
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.GlobPattern;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ArrayNode;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+
+import static com.linkedin.cubert.utils.JsonUtils.getText;
 
 /**
  * Utility methods to enumerate paths in the file system.
@@ -36,6 +38,22 @@ import org.joda.time.format.DateTimeFormatter;
  */
 public class FileSystemUtils
 {
+
+    public static Path getFirstMatch(FileSystem fs, Path path, String globPatternStr, boolean recursive)
+        throws IOException
+    {
+        RemoteIterator<LocatedFileStatus> files = fs.listFiles(path, recursive);
+        GlobPattern globPattern = new GlobPattern(globPatternStr);
+
+        while (files.hasNext())
+        {
+            Path aFile = files.next().getPath();
+            if(globPattern.matches(aFile.getName()))
+                return aFile;
+        }
+
+        return null;
+    }
 
      public static List<Path> getPaths(FileSystem fs, JsonNode json, JsonNode params) throws IOException {
       return getPaths(fs, json, false, params);

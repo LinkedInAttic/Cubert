@@ -1,5 +1,6 @@
 apply plugin: 'java'
 apply plugin: 'eclipse'
+apply plugin: 'idea'
 
 
 ext.isDefaultEnvironment = !project.hasProperty('overrideBuildEnvironment')

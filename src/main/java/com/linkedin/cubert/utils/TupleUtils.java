@@ -12,6 +12,7 @@
 package com.linkedin.cubert.utils;
 
 import com.linkedin.cubert.block.BlockSchema;
+import com.linkedin.cubert.block.ColumnType;
 import com.linkedin.cubert.block.DataType;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -174,5 +175,58 @@ public class TupleUtils
             return getMapDeepCopy((Map) val);
 
         return val;
+    }
+
+    public static Tuple getDeepCopy(Tuple originTuple, BlockSchema schema) throws ExecException
+    {
+        Tuple copiedTuple = TupleFactory.getInstance().newTuple(originTuple.size());
+
+        for (int i = 0; i < schema.getNumColumns(); i++)
+        {
+            ColumnType type = schema.getColumnType(i);
+
+            switch (type.getType())
+            {
+
+                case BYTE:
+                case BOOLEAN:
+                case INT:
+                case LONG:
+                case FLOAT:
+                case DOUBLE:
+                case STRING:
+                case ENUM:
+                case BYTES:
+                case UNKNOWN:
+                    copiedTuple.set(i, originTuple.get(i));
+                    break;
+                case RECORD:
+                case TUPLE:
+                    copiedTuple.set(i, getDeepCopy((Tuple) originTuple.get(i), type.getColumnSchema()));
+                    break;
+                case BAG:
+                case ARRAY:
+                    copiedTuple.set(i, getBagDeepCopy((DataBag) originTuple.get(i), type.getColumnSchema()));
+                    break;
+                case MAP:
+                    copiedTuple.set(i, getMapDeepCopy((Map) originTuple.get(i)));
+                break;
+            }
+        }
+        
+        
+        return copiedTuple;
+    }
+
+    private static DataBag getBagDeepCopy(DataBag originBag, BlockSchema bagSchema) throws ExecException
+    {
+        BlockSchema tupleSchema = bagSchema.getColumnType(0).getColumnSchema();
+
+        ArrayList<Tuple> copiedTuples = new ArrayList<Tuple>((int) originBag.size());
+        for (Tuple t : originBag)
+            copiedTuples.add(getDeepCopy(t, tupleSchema));
+
+        DataBag copiedDataBag = BagFactory.getInstance().newDefaultBag(copiedTuples);
+        return copiedDataBag;
     }
 }

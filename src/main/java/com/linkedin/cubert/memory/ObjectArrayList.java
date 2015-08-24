@@ -14,14 +14,16 @@ package com.linkedin.cubert.memory;
 
 import java.util.Comparator;
 import java.util.List;
+import org.apache.commons.lang.NotImplementedException;
+
 
 /**
  * This class supports a subset of methods from {@link java.util.List}:
  * <ul>
  * <li> {@link add} to add a value in the list</li>
- * 
+ *
  * <li> {@link clear} to reset the list.</li>
- * 
+ *
  * </ul>
  * <p>
  * This class is not thread-safe. Also the iterator is not safe against concurrent
@@ -68,7 +70,6 @@ public final class ObjectArrayList extends SegmentedArrayList
         size++;
     }
 
-
     @Override
     public int compareIndices(int i1, int i2)
     {
@@ -82,6 +83,17 @@ public final class ObjectArrayList extends SegmentedArrayList
     public void setComparator(Comparator comparator)
     {
         this.comparator = comparator;
+    }
+
+    /**
+     * NOTE: Currently not implemented. Use IntArrayList as reference when this array is used in growable mode.
+     * @param reuse
+     * @return
+     */
+    @Override
+    protected Object freshBatch(Object reuse)
+    {
+        throw new NotImplementedException();
     }
 
     public Object get(int pointer)

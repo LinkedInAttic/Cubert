@@ -11,19 +11,17 @@
 
 package com.linkedin.cubert.operator;
 
-import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
-
-import org.apache.pig.data.Tuple;
-import org.apache.pig.data.TupleFactory;
-import org.codehaus.jackson.JsonNode;
-import org.testng.Assert;
-
 import com.linkedin.cubert.block.Block;
 import com.linkedin.cubert.block.BlockProperties;
 import com.linkedin.cubert.block.BlockSchema;
 import com.linkedin.cubert.block.ColumnType;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
+import org.apache.pig.data.Tuple;
+import org.apache.pig.data.TupleFactory;
+import org.codehaus.jackson.JsonNode;
+import org.testng.Assert;
 
 public class ArrayBlock implements Block
 {
@@ -65,10 +63,44 @@ public class ArrayBlock implements Block
             }
             else
             {
-                if (rows.get(0)[i] instanceof Integer)
+                Object element = rows.get(0)[i];
+                if (element == null)
+                    type.setType("long"); // backward compatibility for "null-okay" unit tests
+                else if (element instanceof Integer)
                     type.setType("int");
-                else
+                else if (element instanceof Long)
                     type.setType("long");
+                else if (element instanceof Float)
+                    type.setType("float");
+                else if (element instanceof Double)
+                    type.setType("double");
+                else
+                    throw new RuntimeException("Undefined type ");
+
+//                switch (element.getClass().getSimpleName())
+//                {
+//                    case "Integer" :
+//                    {
+//                        type.setType("int");
+//                        break;
+//                    }
+//                    case "Long" :
+//                    {
+//                        type.setType("long");
+//                        break;
+//                    }
+//                    case "Float" :
+//                    {
+//                        type.setType("float");
+//                        break;
+//                    }
+//                    case "Double" :
+//                    {
+//                        type.setType("double");
+//                        break;
+//                    }
+//                    default : throw new RuntimeException("Undefined type ");
+//                }
             }
             columnTypes[i] = type;
         }

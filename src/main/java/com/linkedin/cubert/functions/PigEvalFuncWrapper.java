@@ -11,21 +11,20 @@
 
 package com.linkedin.cubert.functions;
 
-import java.io.IOException;
-import java.lang.reflect.Type;
-import java.util.List;
-
-import org.apache.pig.EvalFunc;
-import org.apache.pig.data.Tuple;
-import org.apache.pig.impl.logicalLayer.FrontendException;
-import org.apache.pig.impl.logicalLayer.schema.Schema;
-
 import com.linkedin.cubert.block.BlockSchema;
 import com.linkedin.cubert.block.ColumnType;
 import com.linkedin.cubert.block.DataType;
 import com.linkedin.cubert.operator.PreconditionException;
 import com.linkedin.cubert.operator.PreconditionExceptionType;
 import com.linkedin.cubert.utils.SchemaUtils;
+import org.apache.pig.EvalFunc;
+import org.apache.pig.data.Tuple;
+import org.apache.pig.impl.logicalLayer.FrontendException;
+import org.apache.pig.impl.logicalLayer.schema.Schema;
+
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.util.List;
 
 /**
  * Wraps Pig's {@code EvalFunc} as a {@code Function}.
@@ -58,6 +57,7 @@ public class PigEvalFuncWrapper extends Function
         try
         {
             Schema pigSchema = SchemaUtils.convertFromBlockSchema(inputSchema);
+            func.setInputSchema(pigSchema);
             Schema pigOutputSchema = func.outputSchema(pigSchema);
 
             if (pigOutputSchema != null)

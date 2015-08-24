@@ -1,6 +1,8 @@
 package com.linkedin.cubert.memory;
 
 import com.linkedin.cubert.utils.CodeDictionary;
+import org.apache.commons.lang.NotImplementedException;
+
 
 /**
  * @author Maneesh Varshney
@@ -42,5 +44,16 @@ public class DictEncodedArrayList extends SegmentedArrayList
     public int compareIndices(int i1, int i2)
     {
         throw new UnsupportedOperationException();
+    }
+
+    /**
+     * NOTE: Currently not implemented. Use IntArrayList as reference when this array is used in growable mode.
+     * @param reuse
+     * @return
+     */
+    @Override
+    protected Object freshBatch(Object reuse)
+    {
+        throw new NotImplementedException();
     }
 }

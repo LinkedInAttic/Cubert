@@ -11,11 +11,14 @@
 
 package com.linkedin.cubert.utils;
 
+import com.linkedin.cubert.block.BlockSchema;
+import com.linkedin.cubert.block.ColumnType;
+import com.linkedin.cubert.block.DataType;
+import com.linkedin.cubert.pig.piggybank.storage.avro.AvroSchema2Pig;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Field;
 import org.apache.avro.Schema.Type;
@@ -29,17 +32,14 @@ import org.apache.avro.io.DatumReader;
 import org.apache.avro.mapred.FsInput;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.JobConf;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.node.NullNode;
 
-import com.linkedin.cubert.block.BlockSchema;
-import com.linkedin.cubert.block.ColumnType;
-import com.linkedin.cubert.block.DataType;
-import com.linkedin.cubert.pig.piggybank.storage.avro.AvroSchema2Pig;
 
 /**
  * Various utility methods related to Avro Schema.
@@ -50,6 +50,7 @@ import com.linkedin.cubert.pig.piggybank.storage.avro.AvroSchema2Pig;
 public class AvroUtils
 {
     private static int arrayElemInSchemaCounter = 0;
+    private static final boolean PadDefaultNullsToSchema = true;
 
     /**
      * Extracts the schema of an Avro file.
@@ -62,20 +63,15 @@ public class AvroUtils
     public static Schema getSchema(Configuration conf, Path path) throws IOException
     {
         FileSystem fs = path.getFileSystem(conf);
-        if (fs.getFileStatus(path).isDir())
-        {
-            Path globPath = new Path(path, "*.avro");
-            FileStatus[] allFiles = fs.globStatus(globPath);
-            if (allFiles.length == 0)
-            {
-                throw new IOException("there are no files in " + path.toString());
-            }
 
-            path = allFiles[0].getPath();
-        }
-        System.out.println("Obtaining schema of avro file " + path.toString());
+        Path anAvroFile = FileSystemUtils.getFirstMatch(fs, path, "*.avro", true);
 
-        return getSchema(new FsInput(path, conf));
+        if (anAvroFile == null)
+            throw new IOException("there are no files in " + path.toString());
+
+        System.out.println("Obtaining schema of avro file " + anAvroFile.toString());
+
+        return getSchema(new FsInput(anAvroFile, conf));
     }
 
     public static Schema getSchema(SeekableInput input) throws IOException
@@ -83,7 +79,31 @@ public class AvroUtils
         DatumReader<GenericRecord> datumReader = new GenericDatumReader<GenericRecord>();
         DataFileReader<GenericRecord> dataFileReader =
                 new DataFileReader<GenericRecord>(input, datumReader);
-        return dataFileReader.getSchema();
+        Schema schema = dataFileReader.getSchema();
+
+        if (PadDefaultNullsToSchema)
+        {
+            // a list of "cloned" fields, with optional default value set to null
+            ArrayList<Field> paddedFields = new ArrayList<Field>();
+
+            for (Field field: schema.getFields())
+            {
+                // should this field be padded?
+                boolean needsNullPadding = (field.schema() != null) // the field has nested schema
+                    && (field.schema().getType().equals(Type.UNION)) // the nested schema is UNION
+                    && (field.schema().getTypes().get(0).getType().equals(Type.NULL)); // the first element of union is NULL type
+
+                JsonNode defValue = needsNullPadding ? NullNode.getInstance() : field.defaultValue();
+
+                Field f = new Field(field.name(), field.schema(), field.doc(), defValue);
+                paddedFields.add(f);
+            }
+
+            schema = Schema.createRecord(schema.getName(), schema.getDoc(), schema.getNamespace(), schema.isError());
+            schema.setFields(paddedFields);
+        }
+
+        return schema;
     }
 
     /**

@@ -11,21 +11,6 @@
 
 package com.linkedin.cubert.operator;
 
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import org.apache.pig.data.Tuple;
-import org.apache.pig.data.TupleFactory;
-import org.codehaus.jackson.JsonNode;
-
 import com.linkedin.cubert.block.Block;
 import com.linkedin.cubert.block.BlockProperties;
 import com.linkedin.cubert.block.BlockSchema;
@@ -50,14 +35,32 @@ import com.linkedin.cubert.utils.ClassCache;
 import com.linkedin.cubert.utils.CommonUtils;
 import com.linkedin.cubert.utils.JsonUtils;
 import com.linkedin.cubert.utils.Pair;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.pig.data.Tuple;
+import org.apache.pig.data.TupleFactory;
+import org.codehaus.jackson.JsonNode;
 
 /**
- * 
+ *
  * @author Maneesh Varshney
- * 
+ *
  */
 public class CubeOperator implements TupleOperator
 {
+    private static final Log LOG = LogFactory.getLog(CubeOperator.class.getName());
+
     // Default operator configurations
     private static final int DEFAULT_HASH_TABLE_SIZE = 2000000;
 
@@ -85,6 +88,7 @@ public class CubeOperator implements TupleOperator
 
     // runtime state management
     private boolean inputAvailable = true;
+    private Counter flushCounter;
 
     @Override
     public void setInput(Map<String, Block> input, JsonNode json, BlockProperties props) throws IOException,
@@ -157,15 +161,16 @@ public class CubeOperator implements TupleOperator
 
         // set the flush threshold (if defined in conf)
         flushThreshold =
-                PhaseContext.getConf().getFloat("cubert.cube.flush.threshold",
-                                                (float) flushThreshold);
+                PhaseContext.getConf().getFloat("cubert.cube.flush.threshold", (float) flushThreshold);
+
+        flushCounter = CubertCounter.CUBE_FLUSH_COUNTER.getCounter();
     }
 
     /**
      * Process input tuples for cubing without inner dimensions. Note that
      * DupleCubeAggregators cannot be used here (any attempt to use such aggregators would
      * have be caught at the compile time).
-     * 
+     *
      * @return boolean flag to indicate if there is more input to be processed
      * @throws IOException
      * @throws InterruptedException
@@ -193,7 +198,10 @@ public class CubeOperator implements TupleOperator
             }
 
             if (hashTable.size() >= hashTableSize * flushThreshold)
+            {
+                flushCounter.increment(1);
                 break;
+            }
         }
 
         if (tuple == null)
@@ -206,7 +214,7 @@ public class CubeOperator implements TupleOperator
 
     /**
      * Process input tuples for cubing WITH inner dimensions.
-     * 
+     *
      * @return boolean flag to indicate if there is more input to be processed
      * @return
      * @throws IOException
@@ -223,6 +231,8 @@ public class CubeOperator implements TupleOperator
             Tuple tuple;
 
             indexSet.clear();
+
+            int maxIndex = 0;
 
             while ((tuple = inputBlock.next()) != null)
             {
@@ -242,8 +252,18 @@ public class CubeOperator implements TupleOperator
                     for (DupleCubeAggregator agg : dupleAggregators)
                         agg.innerAggregate(idx.getFirst());
 
-                    indexSet.add(idx.getFirst());
+                    Integer index  = idx.getFirst();
+                    maxIndex = Math.max(maxIndex, index.intValue());
+
+                    indexSet.add(index);
                 }
+            }
+
+            // Ensure capacity
+            if (maxIndex + 1 > hashTableSize)
+            {
+                for (DupleCubeAggregator agg : dupleAggregators)
+                    agg.allocate(maxIndex);
             }
 
             IntIterator it = indexSet.iterator();
@@ -260,8 +280,10 @@ public class CubeOperator implements TupleOperator
                 break;
             }
 
-            if (hashTable.size() >= hashTableSize * flushThreshold)
+            if (hashTable.size() >= hashTableSize * flushThreshold) {
+                flushCounter.increment(1);
                 break;
+            }
         }
 
         iterator = hashTable.getIterator();

@@ -11,18 +11,10 @@
 
 package com.linkedin.cubert.plan.physical;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.UUID;
-
+import com.linkedin.cubert.block.BlockSchema;
+import com.linkedin.cubert.block.Index;
+import com.linkedin.cubert.io.*;
+import com.linkedin.cubert.utils.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileStatus;
@@ -38,18 +30,11 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
 
-import com.linkedin.cubert.block.BlockSchema;
-import com.linkedin.cubert.block.Index;
-import com.linkedin.cubert.io.ConfigurationDiff;
-import com.linkedin.cubert.io.CubertInputFormat;
-import com.linkedin.cubert.io.SerializerUtils;
-import com.linkedin.cubert.io.Storage;
-import com.linkedin.cubert.io.StorageFactory;
-import com.linkedin.cubert.utils.ExecutionConfig;
-import com.linkedin.cubert.utils.FileSystemUtils;
-import com.linkedin.cubert.utils.JsonUtils;
-import com.linkedin.cubert.utils.CubertMD;
-import com.linkedin.cubert.utils.print;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * Parses and executes the physical plan of a single Map-Reduce job.
@@ -306,20 +291,57 @@ public class JobExecutor
 
         FileSystem localFs = FileSystem.getLocal(conf);
 
+        HashSet<Path> jarsToCache = new HashSet<Path>();
+
         for (JsonNode node : asArray(root, "libjars"))
         {
             Path path = new Path(node.getTextValue());
 
-            if (localFs.exists(path))
-            {
-                Path dstPath = new Path(tmpDir, path.getName());
-                fs.copyFromLocalFile(path, dstPath);
+            // Is path in local fs or HDFS
+            boolean fileIsLocal = localFs.exists(path);
+            FileSystem thisFs = fileIsLocal ? localFs : fs;
 
-                path = dstPath;
+            // If path is a directory, glob all jar files.
+            List<Path> sources = new LinkedList<Path>();
+            if (thisFs.isDirectory(path))
+            {
+                Path dirPath = new Path(path.toString() + "/*.jar");
+                FileStatus[] jars = thisFs.globStatus(dirPath);
+
+                for (FileStatus jar : jars)
+                {
+                    Path filePath = jar.getPath();
+                    sources.add(filePath);
+                }
+            }
+            else
+            {
+                sources.add(path);
             }
 
-            DistributedCache.addFileToClassPath(path, conf, fs);
+            // For all source jars corresponding to this <code>path</code>
+            // add to HDFS if path is local
+            for (Path srcPath : sources)
+            {
+                if (fileIsLocal)
+                {
+                    Path dstPath = new Path(tmpDir, srcPath.getName());
+                    fs.copyFromLocalFile(srcPath, dstPath);
+                    srcPath = dstPath;
+                }
 
+                if (jarsToCache.contains(srcPath))
+                {
+                    throw new RuntimeException("Duplicate jar specified: '" + srcPath.getName() + "'");
+                }
+                jarsToCache.add(srcPath);
+            }
+        }
+
+        // Add jars to distributed cache
+        for (Path path : jarsToCache)
+        {
+            DistributedCache.addFileToClassPath(path, conf, fs);
         }
     }
 

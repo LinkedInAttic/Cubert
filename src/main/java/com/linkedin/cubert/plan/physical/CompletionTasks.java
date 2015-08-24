@@ -56,6 +56,14 @@ public class CompletionTasks
                     fs.delete(to, true);
                     fs.rename(from, to);
                 }
+                else if (taskType.equals("mkdir"))
+                {
+                    for (String path : paths)
+                    {
+                        System.out.println("Creating directory " + path);
+                        fs.mkdirs(new Path(path));
+                    }
+                }
             }
             catch (IOException e)
             {

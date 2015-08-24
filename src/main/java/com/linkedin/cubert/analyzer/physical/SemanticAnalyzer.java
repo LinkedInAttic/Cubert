@@ -11,28 +11,9 @@
 
 package com.linkedin.cubert.analyzer.physical;
 
-import static com.linkedin.cubert.utils.JsonUtils.asArray;
-import static com.linkedin.cubert.utils.JsonUtils.getText;
-
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import com.linkedin.cubert.block.DataType;
-import com.linkedin.cubert.utils.SchemaUtils;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.node.ObjectNode;
-
 import com.linkedin.cubert.block.BlockSchema;
 import com.linkedin.cubert.block.ColumnType;
+import com.linkedin.cubert.block.DataType;
 import com.linkedin.cubert.functions.builtin.FunctionFactory;
 import com.linkedin.cubert.io.rubix.RubixConstants;
 import com.linkedin.cubert.operator.BlockOperator;
@@ -46,7 +27,24 @@ import com.linkedin.cubert.operator.TupleOperator;
 import com.linkedin.cubert.plan.physical.CubertCombiner;
 import com.linkedin.cubert.utils.CommonUtils;
 import com.linkedin.cubert.utils.JsonUtils;
+import com.linkedin.cubert.utils.SchemaUtils;
 import com.linkedin.cubert.utils.print;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.node.ObjectNode;
+
+import static com.linkedin.cubert.utils.JsonUtils.asArray;
+import static com.linkedin.cubert.utils.JsonUtils.getText;
 
 /**
  * Sematically analyzes the cubert physical plan.
@@ -537,25 +535,12 @@ public class SemanticAnalyzer extends PhysicalPlanVisitor implements PlanRewrite
         // make sure partition and pivot keys are in the schema
         if (partitionKeys != null)
         {
-            for (String partitionKey : partitionKeys)
-            {
-                if (!preCondition.getSchema().getIndexMap().containsKey(partitionKey))
-                {
-                    error(json, "Column " + partitionKey + " not found in schema:\n\t"
-                            + preCondition.getSchema());
-                }
-            }
+            checkShuffleKeyErrors(json, preCondition.getSchema(), partitionKeys);
         }
+
         if (pivotKeys != null)
         {
-            for (String pivotKey : pivotKeys)
-            {
-                if (!preCondition.getSchema().getIndexMap().containsKey(pivotKey))
-                {
-                    error(json, "Column " + pivotKey + " not found in schema:\n\t"
-                            + preCondition.getSchema());
-                }
-            }
+            checkShuffleKeyErrors(json, preCondition.getSchema(), pivotKeys);
         }
 
         // if there is a distinct operator in reduce, add remaining columns in pivot keys
@@ -618,6 +603,26 @@ public class SemanticAnalyzer extends PhysicalPlanVisitor implements PlanRewrite
         operatorMap.put(getText(json, "name"), shuffleNode);
     }
 
+    private void checkShuffleKeyErrors(JsonNode json, BlockSchema schema, String[] keys)
+    {
+        final Map<String, Integer> schemaIndexMap = schema.getIndexMap();
+
+        HashSet<String> cols = new HashSet<String>();
+        for (String key : keys)
+        {
+            if (!schemaIndexMap.containsKey(key))
+            {
+                error(json, "Column " + key + " not found in schema:\n\t" + schema);
+            }
+
+            if (cols.contains(key))
+            {
+                error(json, "Duplicate key specified: " + key);
+            }
+
+            cols.add(key);
+        }
+    }
 
     @Override
     public void exitJob(JsonNode json)

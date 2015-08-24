@@ -11,17 +11,9 @@
 
 package com.linkedin.cubert.analyzer.physical;
 
-import static com.linkedin.cubert.utils.CommonUtils.generateVariableName;
-import static com.linkedin.cubert.utils.JsonUtils.asArray;
-import static com.linkedin.cubert.utils.JsonUtils.cloneNode;
-import static com.linkedin.cubert.utils.JsonUtils.createArrayNode;
-import static com.linkedin.cubert.utils.JsonUtils.createObjectNode;
-import static com.linkedin.cubert.utils.JsonUtils.getText;
-
-import java.io.IOException;
-import java.util.Set;
-
 import com.linkedin.cubert.utils.ClassCache;
+import com.linkedin.cubert.utils.CommonUtils;
+import com.linkedin.cubert.utils.JsonUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
@@ -30,8 +22,11 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
 
-import com.linkedin.cubert.utils.CommonUtils;
-import com.linkedin.cubert.utils.JsonUtils;
+import java.io.IOException;
+import java.util.Set;
+
+import static com.linkedin.cubert.utils.CommonUtils.generateVariableName;
+import static com.linkedin.cubert.utils.JsonUtils.*;
 
 /**
  * Rewrites BLOCKGEN or CUBE-COUNT-DISTINCT as shuffle operators.
@@ -252,8 +247,11 @@ public class ShuffleRewriter implements PlanRewriter
     {
 
         String blockgenType = job.get("shuffle").get("blockgenType").getTextValue();
-        if (blockgenType.equals("BY_INDEX"))
+
+        if (blockgenType.equalsIgnoreCase("BY_INDEX"))
+        {
             return rewriteBlockgenByIndex(job);
+        }
         // else: following is the rewrite of BLOCKGEN
 
         ObjectNode newJob = (ObjectNode) cloneNode(job);

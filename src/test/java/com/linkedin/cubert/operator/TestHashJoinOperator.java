@@ -12,21 +12,6 @@
 
 package com.linkedin.cubert.operator;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.pig.backend.executionengine.ExecException;
-import org.apache.pig.data.Tuple;
-import org.codehaus.jackson.node.ArrayNode;
-import org.codehaus.jackson.node.JsonNodeFactory;
-import org.codehaus.jackson.node.ObjectNode;
-import org.testng.Assert;
-import org.testng.annotations.Test;
-
 import com.linkedin.cubert.block.Block;
 import com.linkedin.cubert.block.BlockProperties;
 import com.linkedin.cubert.block.BlockSchema;
@@ -34,9 +19,23 @@ import com.linkedin.cubert.block.ColumnType;
 import com.linkedin.cubert.block.DataType;
 import com.linkedin.cubert.block.TupleStoreBlock;
 import com.linkedin.cubert.plan.physical.CubertStrings;
+import com.linkedin.cubert.plan.physical.TestContext;
 import com.linkedin.cubert.utils.DataGenerator;
 import com.linkedin.cubert.utils.RawTupleStore;
 import com.linkedin.cubert.utils.TupleStore;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.MapContext;
+import org.apache.pig.backend.executionengine.ExecException;
+import org.apache.pig.data.Tuple;
+import org.codehaus.jackson.node.ArrayNode;
+import org.codehaus.jackson.node.JsonNodeFactory;
+import org.codehaus.jackson.node.ObjectNode;
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
 /**
  * Tests the Hash JOIN operator
@@ -55,7 +54,7 @@ public class TestHashJoinOperator
     {
         final Configuration conf = new Configuration();
         conf.set(CubertStrings.USE_COMPACT_SERIALIZATION, useCompactSerialization.toString());
-        PhaseContext.create((Mapper.Context) null, conf);
+        PhaseContext.create((MapContext) new TestContext(), conf);
     }
 
     @Test

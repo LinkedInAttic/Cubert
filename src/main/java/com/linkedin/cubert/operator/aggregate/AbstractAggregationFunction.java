@@ -51,11 +51,25 @@ public abstract class AbstractAggregationFunction implements AggregationFunction
         resetState();
     }
 
+    /**
+     * NOTE: This derived method is made final to protect <code>nonNullValueSeen</code> flag.
+     * To use this class effectively, override <code>resetAggregateValues</code> method to clean internal
+     * datastructures.
+     *
+     * Alternatively, directly derive from base class.
+     */
     @Override
-    public void resetState()
+    final public void resetState()
     {
         nonNullValueSeen = false;
+        resetAggregateValues();
     }
+
+    /**
+     *
+     * All derived classes need to override this method to clear internal aggregation values.
+     */
+    public abstract void resetAggregateValues();
 
     @Override
     public abstract void aggregate(Tuple input) throws IOException;

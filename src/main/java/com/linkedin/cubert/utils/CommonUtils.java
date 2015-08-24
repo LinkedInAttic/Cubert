@@ -11,14 +11,8 @@
 
 package com.linkedin.cubert.utils;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 
 public class CommonUtils
 {
@@ -35,26 +29,6 @@ public class CommonUtils
                 return name;
             }
         }
-    }
-
-    public static Path getAFileInPath(Configuration conf, Path path, String suffix) throws IOException
-    {
-        FileSystem fs = path.getFileSystem(conf);
-        if (fs.getFileStatus(path).isDir())
-        {
-            Path globPath = new Path(path, "*." + suffix);
-            FileStatus[] allFiles = fs.globStatus(globPath);
-            if (allFiles.length == 0)
-            {
-                throw new IOException("there are no files in " + path.toString());
-            }
-
-            path = allFiles[0].getPath();
-        }
-
-        print.f("Obtaining schema of %s file %s", suffix, path.toString());
-
-        return path;
     }
 
     public static boolean isPrefix(String[] array, String[] prefix)
@@ -140,7 +114,7 @@ public class CommonUtils
 
     public static String stripQuotes(String s)
     {
-        return s.replaceAll("^\"|\"$", "");
+        return s.replaceAll("^\"|\"$|^\'|\'$", "");
     }
 
     public static String[] array(String str)

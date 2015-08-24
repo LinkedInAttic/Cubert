@@ -12,10 +12,9 @@
 
 package com.linkedin.cubert.io.virtual;
 
-import org.apache.hadoop.io.FloatWritable;
-import org.apache.hadoop.mapreduce.Mapper;
-
 import com.linkedin.cubert.operator.PhaseContext;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.mapreduce.MapContext;
 
 /**
  * VirtualProgressReporter
@@ -38,7 +37,7 @@ public class VirtualProgressReporter
     {
         if (PhaseContext.isIntialized())
         {
-            final Mapper.Context mapContext = PhaseContext.getMapContext();
+            final MapContext mapContext = PhaseContext.getMapContext();
             try
             {
                 final FloatWritable progress = (FloatWritable) mapContext.getCurrentKey();

@@ -3,9 +3,9 @@ package com.linkedin.cubert.memory;
 import com.linkedin.cubert.block.BlockSchema;
 import java.io.IOException;
 import java.util.Iterator;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.pig.backend.executionengine.ExecException;
 import org.apache.pig.data.DataBag;
-import org.apache.pig.data.DataType;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 
@@ -98,5 +98,16 @@ public class BagArrayList extends SegmentedArrayList
     public int compareIndices(int i1, int i2)
     {
         throw new UnsupportedOperationException();
+    }
+
+    /**
+     * NOTE: Currently not implemented. Use IntArrayList as reference when this array is used in growable mode.
+     * @param reuse
+     * @return
+     */
+    @Override
+    protected Object freshBatch(Object reuse)
+    {
+        throw new NotImplementedException();
     }
 }

@@ -14,27 +14,21 @@
 
 package com.linkedin.cubert.plan.physical;
 
-import java.io.ByteArrayInputStream;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import org.antlr.v4.runtime.ANTLRInputStream;
-import org.antlr.v4.runtime.BaseErrorListener;
-import org.antlr.v4.runtime.CharStream;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.ParserRuleContext;
-import org.antlr.v4.runtime.RecognitionException;
-import org.antlr.v4.runtime.Recognizer;
+import com.linkedin.cubert.antlr4.CubertPhysicalBaseListener;
+import com.linkedin.cubert.antlr4.CubertPhysicalLexer;
+import com.linkedin.cubert.antlr4.CubertPhysicalListener;
+import com.linkedin.cubert.antlr4.CubertPhysicalParser;
+import com.linkedin.cubert.antlr4.CubertPhysicalParser.*;
+import com.linkedin.cubert.functions.Function;
+import com.linkedin.cubert.functions.builtin.FunctionFactory;
+import com.linkedin.cubert.io.IndexCacheable;
+import com.linkedin.cubert.io.NeedCachedFiles;
+import com.linkedin.cubert.operator.BlockOperator;
+import com.linkedin.cubert.operator.TupleOperator;
+import com.linkedin.cubert.operator.aggregate.AggregationFunctions;
+import com.linkedin.cubert.utils.CommonUtils;
+import com.linkedin.cubert.utils.JsonUtils;
+import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.misc.Interval;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -46,66 +40,9 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ArrayNode;
 import org.codehaus.jackson.node.ObjectNode;
 
-import com.linkedin.cubert.antlr4.CubertPhysicalBaseListener;
-import com.linkedin.cubert.antlr4.CubertPhysicalLexer;
-import com.linkedin.cubert.antlr4.CubertPhysicalListener;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.AggregateContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.AggregateListContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.AggregationFunctionContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.BlockgenShuffleCommandContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.CaseFunctionArgContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.ColumnDictionaryContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.ColumnProjectionExpressionContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.CombineOperatorContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.ConstantExpressionContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.CreateDictionaryContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.CubeAggregateContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.CubeOperatorContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.CubeShuffleCommandContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.CubeStatementContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.CuboidContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.DictionaryShuffleCommandContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.DistinctShuffleCommandContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.ExpressionContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.FlattenItemContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.FlattenOperatorContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.FlattenTypeContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.GatherOperatorContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.GenerateExpressionContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.GenerateExpressionListContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.GroupingSetsClauseContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.InputPathContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.InputPathsContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.LoadCachedOperatorContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.MapProjectionExpressionContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.NestedProjectionExpressionContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.NoopOperatorContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.OnCompletionTaskContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.OnCompletionTasksContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.PathContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.PivotOperatorContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.RankOperatorContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.RollupsClauseContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.SummaryRewriteClauseContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.TeeOperatorContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.TerminalExpressionContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.TimeColumnSpecContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.TopNOperatorContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.TypeDefinitionContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.TypeDefinitionsContext;
-import com.linkedin.cubert.antlr4.CubertPhysicalParser.UriOperatorContext;
-import com.linkedin.cubert.functions.Function;
-import com.linkedin.cubert.functions.builtin.FunctionFactory;
-import com.linkedin.cubert.io.IndexCacheable;
-import com.linkedin.cubert.io.NeedCachedFiles;
-import com.linkedin.cubert.operator.BlockOperator;
-import com.linkedin.cubert.operator.TupleOperator;
-import com.linkedin.cubert.operator.aggregate.AggregationFunctions;
-import com.linkedin.cubert.utils.CommonUtils;
-import com.linkedin.cubert.utils.JsonUtils;
-
-import static com.linkedin.cubert.antlr4.CubertPhysicalParser.*;
+import java.io.*;
+import java.text.ParseException;
+import java.util.*;
 
 /**
  * This class provides an empty implementation of {@link CubertPhysicalListener}, which
@@ -371,7 +308,7 @@ public class PhysicalParser
             inputNode.put("name", ctx.ID().get(0).getText());
 
             if (ctx.format != null)
-                inputNode.put("type", ctx.format.getText());
+                inputNode.put("type", ctx.format.getText().toUpperCase());
             else
                 inputNode.put("type", ctx.classname.getText());
 
@@ -428,7 +365,7 @@ public class PhysicalParser
             outputCommandNode.put("name", ctx.ID().get(0).getText());
             outputCommandNode.put("path", cleanPath(ctx.path()));
             if (ctx.format != null)
-                outputCommandNode.put("type", ctx.format.getText());
+                outputCommandNode.put("type", ctx.format.getText().toUpperCase());
             else
                 outputCommandNode.put("type", ctx.classname.getText());
 
@@ -483,6 +420,11 @@ public class PhysicalParser
             {
                 operatorNode.put("replaceNull", ctx.nullas.getText());
             }
+
+            if (ctx.n != null)
+            {
+                operatorNode.put("replaceUnknownCodes", ctx.n.getText());
+            }
         }
 
         @Override
@@ -519,6 +461,11 @@ public class PhysicalParser
                 String dictionaryPath = cleanPath(ctx.path());
                 operatorNode.put("path", dictionaryPath);
                 cachedFiles.add(dictionaryPath);
+            }
+
+            if (ctx.unknownas != null )
+            {
+                operatorNode.put("replaceUnknownCodes", CommonUtils.stripQuotes(ctx.unknownas.getText()));
             }
         }
 
@@ -930,7 +877,7 @@ public class PhysicalParser
             operatorNode.put("operator", "VALIDATE");
             operatorNode.put("input", ctx.ID(0).getText());
             operatorNode.put("output", this.operatorCommandLhs);
-            operatorNode.put("blockgenType", "BY_" + ctx.ID().get(1).getText());
+            operatorNode.put("blockgenType", "BY_" + ctx.ID().get(1).getText().toUpperCase());
 
             if (ctx.blockgenValue != null)
             {
@@ -1503,7 +1450,7 @@ public class PhysicalParser
             String path = cleanPath(ctx.path());
             path = new Path(path).toString();
             operatorNode.put("path", path);
-            operatorNode.put("type", ctx.ID().getText());
+            operatorNode.put("type", ctx.ID().getText().toUpperCase());
             operatorNode.put("output", operatorCommandLhs);
 
             ObjectNode paramsNode = objMapper.createObjectNode();
@@ -1528,7 +1475,7 @@ public class PhysicalParser
             operatorNode.put("input", ctx.ID(0).getText());
             operatorNode.put("output", operatorCommandLhs);
             operatorNode.put("path", cleanPath(ctx.path()));
-            operatorNode.put("type", ctx.ID(1).getText());
+            operatorNode.put("type", ctx.ID(1).getText().toUpperCase());
             operatorNode.put("passthrough", ctx.split == null);
 
             ObjectNode paramsNode = objMapper.createObjectNode();
@@ -1677,7 +1624,7 @@ public class PhysicalParser
                                                "name",
                                                ctx.ID(0).getText(),
                                                "blockgenType",
-                                               "BY_" + ctx.blockgenType.getText(),
+                                               "BY_" + ctx.blockgenType.getText().toUpperCase(),
                                                "partitionKeys",
                                                createIDListNode(ctx.columns().get(0).ID()));
 
@@ -1843,7 +1790,7 @@ public class PhysicalParser
         /**
          * Given a list of elements <code> { a, b, c } </code>, return a rollup set
          * <code> { {}, { a }, { a, b } , { a, b, c } ] </code>
-         * 
+         *
          * @param group
          * @return
          */
@@ -1869,13 +1816,13 @@ public class PhysicalParser
 
         /**
          * Given two lists of lists
-         * 
+         *
          * <pre>
          * A := { { a } { b, c } }
          * B := { { d } { e } }
          * A x B := { { a, d } { a, e } { b, c, d } { b, c, e } }
          * </pre>
-         * 
+         *
          * @param leftOperand
          * @param rightOperand
          * @return
@@ -2170,6 +2117,13 @@ public class PhysicalParser
                     task.put("type", "mv");
 
                     for (PathContext path : taskCtx.mvTask().path())
+                        args.add(CommonUtils.stripQuotes(path.getText()));
+                }
+                else if (taskCtx.mkdirTask() != null)
+                {
+                    task.put("type", "mkdir");
+
+                    for (PathContext path : taskCtx.mkdirTask().path())
                         args.add(CommonUtils.stripQuotes(path.getText()));
                 }
                 else if (taskCtx.dumpTask() != null)

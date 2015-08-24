@@ -11,19 +11,6 @@
 
 package com.linkedin.cubert.operator;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Map;
-
-import org.apache.pig.backend.executionengine.ExecException;
-import org.apache.pig.data.Tuple;
-import org.apache.pig.data.TupleFactory;
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.JsonParseException;
-import org.codehaus.jackson.map.JsonMappingException;
-
 import com.linkedin.cubert.block.Block;
 import com.linkedin.cubert.block.BlockProperties;
 import com.linkedin.cubert.block.BlockSchema;
@@ -31,6 +18,20 @@ import com.linkedin.cubert.block.ColumnType;
 import com.linkedin.cubert.block.TupleComparator;
 import com.linkedin.cubert.utils.CommonUtils;
 import com.linkedin.cubert.utils.JsonUtils;
+import com.linkedin.cubert.utils.TupleUtils;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Map;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.pig.backend.executionengine.ExecException;
+import org.apache.pig.data.Tuple;
+import org.apache.pig.data.TupleFactory;
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.JsonParseException;
+import org.codehaus.jackson.map.JsonMappingException;
+
 
 public class MergeJoinOperator implements TupleOperator
 {
@@ -43,10 +44,9 @@ public class MergeJoinOperator implements TupleOperator
     private Tuple leftTuple = null;
     private Tuple rightTuple = null;
 
-    private String leftName;
-    private String rightName;
+    private BlockSchema leftSchema;
 
-    private TupleComparator comparator = null;
+    protected TupleComparator comparator = null;
     private JoinSet currentJoinSet = null;
     private boolean initDone = false;
 
@@ -58,10 +58,11 @@ public class MergeJoinOperator implements TupleOperator
     private boolean isRightJoin = false;
     private boolean isFullOuterJoin = false;
     private Tuple nullRightTuple, nullLeftTuple;
-    private Tuple joinedTuple;
+    public Tuple joinedTuple;
 
     // . or - are not compatible with avro; hence this string
     private static String JOIN_SEP = "___";
+    private Counter outputTupleCounter;
 
     @Override
     public void setInput(Map<String, Block> input, JsonNode root, BlockProperties props) throws JsonParseException,
@@ -74,12 +75,10 @@ public class MergeJoinOperator implements TupleOperator
         {
             if (name.equalsIgnoreCase(leftBlockName))
             {
-                leftName = name;
                 leftBlock = input.get(name);
             }
             else
             {
-                rightName = name;
                 rightBlock = input.get(name);
             }
         }
@@ -103,7 +102,7 @@ public class MergeJoinOperator implements TupleOperator
         leftBlockColumns = JsonUtils.asArray(root, "leftCubeColumns");
         rightBlockColumns = JsonUtils.asArray(root, "rightCubeColumns");
 
-        BlockSchema leftSchema = leftBlock.getProperties().getSchema();
+        leftSchema = leftBlock.getProperties().getSchema();
         BlockSchema rightSchema = rightBlock.getProperties().getSchema();
 
         comparator =
@@ -122,6 +121,8 @@ public class MergeJoinOperator implements TupleOperator
         joinedTuple =
                 TupleFactory.getInstance().newTuple(props.getSchema().getNumColumns());
         currentJoinSet = new JoinSet(joinedTuple);
+
+        outputTupleCounter = CubertCounter.MERGE_JOIN_OUTPUT_COUNTER.getCounter();
     }
 
     @Override
@@ -131,9 +132,7 @@ public class MergeJoinOperator implements TupleOperator
         outputCounter++;
         if (outputCounter % 1000 == 0)
         {
-            PhaseContext.getCounter("mergejoinoperator", "outputCounter")
-                        .increment(outputCounter);
-
+            outputTupleCounter.increment(outputCounter);
             outputCounter = 0;
         }
 
@@ -142,8 +141,8 @@ public class MergeJoinOperator implements TupleOperator
             initDone = true;
 
             // get a tuple from each of the cube to start off
-            leftTuple = leftBlock.next();
-            rightTuple = rightBlock.next();
+            leftTuple = nextLeft();
+            rightTuple = nextRight();
         }
 
         while (true)
@@ -169,10 +168,10 @@ public class MergeJoinOperator implements TupleOperator
                     && currentJoinSet.rightTupleList.size() > 0
                     && comparator.compare(leftTuple, currentJoinSet.rightTupleList.get(0)) == 0)
             {
-                Tuple clonedLeft =
-                        TupleFactory.getInstance().newTuple(leftTuple.getAll());
+                Tuple clonedLeft = TupleUtils.getDeepCopy(leftTuple, leftSchema);
+//                        TupleFactory.getInstance().newTuple(leftTuple.getAll());
                 currentJoinSet.reset(clonedLeft);
-                leftTuple = leftBlock.next();
+                leftTuple = nextLeft();
 
             }
             else if (leftTuple != null
@@ -181,13 +180,13 @@ public class MergeJoinOperator implements TupleOperator
                 if (isLeftJoin || isFullOuterJoin)
                 {
                     joinedTuple = buildJoinedTuple(leftTuple, nullRightTuple);
-                    leftTuple = leftBlock.next();
+                    leftTuple = nextLeft();
                     return joinedTuple;
                 }
                 else
                 {
 
-                    leftTuple = leftBlock.next();
+                    leftTuple = nextLeft();
                 }
             }
             else if (rightTuple != null
@@ -196,12 +195,12 @@ public class MergeJoinOperator implements TupleOperator
                 if (isRightJoin || isFullOuterJoin)
                 {
                     joinedTuple = buildJoinedTuple(nullLeftTuple, rightTuple);
-                    rightTuple = rightBlock.next();
+                    rightTuple = nextRight();
                     return joinedTuple;
                 }
                 else
                 {
-                    rightTuple = rightBlock.next();
+                    rightTuple = nextRight();
                 }
             }
             else
@@ -214,10 +213,22 @@ public class MergeJoinOperator implements TupleOperator
                 assert (comparator.compare(leftTuple, rightTuple) == 0);
 
                 currentJoinSet = getValidJoinSet();
-                leftTuple = leftBlock.next();
+                leftTuple = nextLeft();
             }
 
         }
+    }
+
+    public Tuple nextLeft()
+        throws IOException, InterruptedException
+    {
+        return leftBlock.next();
+    }
+
+    public Tuple nextRight()
+        throws IOException, InterruptedException
+    {
+        return rightBlock.next();
     }
 
     private JoinSet getValidJoinSet() throws IOException,
@@ -226,7 +237,8 @@ public class MergeJoinOperator implements TupleOperator
         if (leftTuple == null)
             return null;
 
-        Tuple clonedLeft = TupleFactory.getInstance().newTuple(leftTuple.getAll());
+        Tuple clonedLeft = TupleUtils.getDeepCopy(leftTuple, leftSchema);
+//                TupleFactory.getInstance().newTuple(leftTuple.getAll());
         currentJoinSet.reset(clonedLeft);
         currentJoinSet.rightTupleList.clear();
 
@@ -235,22 +247,22 @@ public class MergeJoinOperator implements TupleOperator
             Tuple cloned = TupleFactory.getInstance().newTuple(rightTuple.getAll());
             currentJoinSet.rightTupleList.add(cloned);
 
-            rightTuple = rightBlock.next();
+            rightTuple = nextRight();
         }
 
         return currentJoinSet;
     }
 
-    private Tuple buildJoinedTuple(Tuple left, Tuple right) throws ExecException
+    public Tuple buildJoinedTuple(Tuple left, Tuple right) throws ExecException
     {
         int idx = 0;
-        for (Object field : left.getAll())
+        for (int i = 0; i < left.size(); i++)
         {
-            joinedTuple.set(idx++, field);
+            joinedTuple.set(idx++, left.get(i));
         }
-        for (Object field : right.getAll())
+        for (int i = 0; i < right.size(); i++)
         {
-            joinedTuple.set(idx++, field);
+            joinedTuple.set(idx++, right.get(i));
         }
 
         return joinedTuple;

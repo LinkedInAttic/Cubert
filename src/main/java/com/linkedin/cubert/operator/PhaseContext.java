@@ -11,23 +11,23 @@
 
 package com.linkedin.cubert.operator;
 
+import com.linkedin.cubert.utils.ExecutionConfig;
 import java.io.IOException;
 import java.util.HashMap;
-
-import org.apache.pig.impl.util.UDFContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Counter;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import com.linkedin.cubert.utils.ExecutionConfig;
+import org.apache.hadoop.mapreduce.MapContext;
+import org.apache.hadoop.mapreduce.ReduceContext;
+import org.apache.hadoop.mapreduce.TaskInputOutputContext;
+import org.apache.pig.backend.hadoop.executionengine.mapReduceLayer.MRTaskContext;
+import org.apache.pig.impl.util.UDFContext;
+import org.apache.pig.tools.pigstats.PigStatusReporter;
 
 public class PhaseContext
 {
     private static boolean initialized = false;
-    private static Reducer.Context redContext;
-    private static Mapper.Context mapContext;
+    private static ReduceContext redContext;
+    private static MapContext mapContext;
     private static boolean isMapper;
     private static HashMap<String, Object> udfObjects = new HashMap<String, Object>();
 
@@ -47,18 +47,20 @@ public class PhaseContext
     {
     }
 
-    public static void create(Reducer.Context context, Configuration conf) throws IOException
+    public static void create(ReduceContext context, Configuration conf) throws IOException
     {
         redContext = context;
         isMapper = false;
         initCommonConfig(conf);
+        PigStatusReporter.getInstance().setContext(new MRTaskContext(context));
     }
 
-    public static void create(Mapper.Context context, Configuration conf) throws IOException
+    public static void create(MapContext context, Configuration conf) throws IOException
     {
         mapContext = context;
         isMapper = true;
         initCommonConfig(conf);
+        PigStatusReporter.getInstance().setContext(new MRTaskContext(context));
     }
 
     private static void initCommonConfig(Configuration conf) throws IOException
@@ -79,12 +81,12 @@ public class PhaseContext
         return isMapper;
     }
 
-    public static Mapper.Context getMapContext()
+    public static MapContext getMapContext()
     {
         return mapContext;
     }
 
-    public static Reducer.Context getRedContext()
+    public static ReduceContext getRedContext()
     {
         return redContext;
     }
@@ -94,7 +96,7 @@ public class PhaseContext
         return conf;
     }
 
-    public static TaskAttemptContext getContext()
+    public static TaskInputOutputContext getContext()
     {
         if (isMapper)
             return mapContext;
@@ -104,17 +106,11 @@ public class PhaseContext
 
     public static Counter getCounter(String groupName, String counterName)
     {
-        if (isMapper)
-            return mapContext.getCounter(groupName, counterName);
-        else
-            return redContext.getCounter(groupName, counterName);
+        return getContext().getCounter(groupName, counterName);
     }
 
     public static long getUniqueId()
     {
-        if (isMapper)
-            return PhaseContext.getMapContext().getTaskAttemptID().getTaskID().getId();
-        else
-            return PhaseContext.getRedContext().getTaskAttemptID().getTaskID().getId();
+        return  getContext().getTaskAttemptID().getTaskID().getId();
     }
 }

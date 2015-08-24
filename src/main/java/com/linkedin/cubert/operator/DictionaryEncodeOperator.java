@@ -11,6 +11,7 @@
 
 package com.linkedin.cubert.operator;
 
+import com.linkedin.cubert.block.DataType;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -51,6 +52,7 @@ public class DictionaryEncodeOperator implements TupleOperator
     private Block dataBlock;
     private Tuple encodedTuple;
     private String replaceNull = null;
+    private Integer replaceUnknownCodes = null;
 
     @Override
     public void setInput(Map<String, Block> input, JsonNode json, BlockProperties props) throws IOException,
@@ -114,6 +116,11 @@ public class DictionaryEncodeOperator implements TupleOperator
         {
             replaceNull = JsonUtils.getText(json, "replaceNull");
         }
+
+        if (json.has("replaceUnknownCodes"))
+        {
+            replaceUnknownCodes = Integer.parseInt(JsonUtils.getText(json, "replaceUnknownCodes"));
+        }
     }
 
     @Override
@@ -142,12 +149,24 @@ public class DictionaryEncodeOperator implements TupleOperator
                     str = replaceNull;
                 }
                 else
+                {
                     str = val.toString();
+                }
 
                 int code = dictionaries[i].getCodeForKey(str);
                 if (code <= 0)
-                    throw new RuntimeException("String '" + str
+                {
+                    if (replaceUnknownCodes == null)
+                    {
+                        throw new RuntimeException("String '" + str
                             + "' not found in dictionary.");
+                    }
+                    else
+                    {
+                        code = replaceUnknownCodes.intValue();
+                    }
+                }
+
                 encodedTuple.set(i, code);
             }
         }
@@ -194,19 +213,21 @@ public class DictionaryEncodeOperator implements TupleOperator
 
         for (int i = 0; i < columnTypes.length; i++)
         {
-            ColumnType type = new ColumnType();
-            columnTypes[i] = type;
+            ColumnType type;
+            final String name = inputSchema.getName(i);
 
-            type.setName(inputSchema.getName(i));
-
-            if (dictionaryMap.containsKey(type.getName()))
+            if (dictionaryMap.containsKey(name))
             {
-                type.setType("int");
+                // this column is encoded. Transform schema
+                type = new ColumnType(name, DataType.INT);
             }
             else
             {
-                type.setType(inputSchema.getType(i));
+                // this column is not encoded. Reuse schema
+                type = inputSchema.getColumnType(i);
             }
+
+            columnTypes[i] = type;
         }
 
         BlockSchema schema = new BlockSchema(columnTypes);

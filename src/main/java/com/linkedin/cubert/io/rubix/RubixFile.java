@@ -11,6 +11,11 @@
 
 package com.linkedin.cubert.io.rubix;
 
+import com.linkedin.cubert.block.BlockSchema;
+import com.linkedin.cubert.io.BlockSerializationType;
+import com.linkedin.cubert.utils.ClassCache;
+import com.linkedin.cubert.utils.JsonUtils;
+import com.linkedin.cubert.utils.print;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -24,7 +29,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -36,7 +40,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.io.serializer.Serializer;
@@ -45,12 +48,6 @@ import org.apache.pig.data.Tuple;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.node.ObjectNode;
-
-import com.linkedin.cubert.block.BlockSchema;
-import com.linkedin.cubert.io.BlockSerializationType;
-import com.linkedin.cubert.utils.JsonUtils;
-import com.linkedin.cubert.utils.print;
-import com.linkedin.cubert.utils.ClassCache;
 
 public class RubixFile<K, V>
 {
@@ -190,8 +187,7 @@ public class RubixFile<K, V>
         if (!metadataJson.has("serializationType"))
             return BlockSerializationType.DEFAULT;
 
-        return BlockSerializationType.valueOf(JsonUtils.getText(metadataJson,
-                                                                "serializationType"));
+        return BlockSerializationType.valueOf(JsonUtils.getText(metadataJson, "serializationType"));
     }
 
     public String getBlockgenId() throws IOException,
@@ -203,6 +199,32 @@ public class RubixFile<K, V>
         if (!metadataJson.has("BlockgenId"))
             return null;
         return JsonUtils.getText(metadataJson, "BlockgenId");
+    }
+
+    public static FileStatus[] getRubixFiles(Path path, FileSystem fs)
+        throws IOException
+    {
+        Path globPath = new Path(path, RubixConstants.RUBIX_EXTENSION_FOR_GLOB);
+        return fs.globStatus(globPath);
+    }
+
+    public static Path getARubixFile(Configuration conf, Path path) throws IOException
+    {
+        FileSystem fs = path.getFileSystem(conf);
+        if (fs.getFileStatus(path).isDir())
+        {
+            FileStatus[] allFiles = getRubixFiles(path, fs);
+            if (allFiles.length == 0)
+            {
+                throw new IOException("there are no files in " + path.toString());
+            }
+
+            path = allFiles[0].getPath();
+        }
+
+        print.f("Obtaining schema of rubix file %s", path.toString());
+
+        return path;
     }
 
     @SuppressWarnings("unchecked")
@@ -607,15 +629,7 @@ public class RubixFile<K, V>
         FileStatus status = fs.getFileStatus(path);
         if (status.isDir())
         {
-            allFiles = fs.listStatus(path, new PathFilter()
-            {
-                @Override
-                public boolean accept(Path path)
-                {
-                    return path.toString().contains(RubixConstants.RUBIX_EXTENSION);
-                }
-
-            });
+            allFiles = RubixFile.getRubixFiles(path, fs);
         }
         else
         {

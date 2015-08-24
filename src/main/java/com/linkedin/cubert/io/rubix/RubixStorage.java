@@ -11,16 +11,6 @@
 
 package com.linkedin.cubert.io.rubix;
 
-import java.io.IOException;
-import java.util.List;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.pig.data.Tuple;
-import org.apache.pig.data.TupleFactory;
-import org.codehaus.jackson.JsonNode;
-
 import com.linkedin.cubert.analyzer.physical.PlanRewriteException;
 import com.linkedin.cubert.block.BlockSchema;
 import com.linkedin.cubert.block.BlockWriter;
@@ -30,8 +20,15 @@ import com.linkedin.cubert.io.Storage;
 import com.linkedin.cubert.io.TeeWriter;
 import com.linkedin.cubert.operator.PostCondition;
 import com.linkedin.cubert.plan.physical.CubertStrings;
-import com.linkedin.cubert.utils.CommonUtils;
 import com.linkedin.cubert.utils.JsonUtils;
+import java.io.IOException;
+import java.util.List;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.pig.data.Tuple;
+import org.apache.pig.data.TupleFactory;
+import org.codehaus.jackson.JsonNode;
 
 public class RubixStorage implements Storage
 {
@@ -90,10 +87,7 @@ public class RubixStorage implements Storage
     @Override
     public PostCondition getPostCondition(Configuration conf, JsonNode json, Path path) throws IOException
     {
-        Path afile =
-                CommonUtils.getAFileInPath(conf,
-                                           path,
-                                           RubixConstants.RUBIX_EXTENSION_SUFFIX);
+        Path afile = RubixFile.getARubixFile(conf, path);
         RubixFile<Tuple, Object> rubixFile = new RubixFile<Tuple, Object>(conf, afile);
         try
         {

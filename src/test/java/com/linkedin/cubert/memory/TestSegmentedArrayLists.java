@@ -62,6 +62,70 @@ public class TestSegmentedArrayLists
         }
     }
 
+    private static int upperBound(int number, int multipleOf)
+    {
+        if (number % multipleOf == 0)
+            return number;
+
+        return ((number / multipleOf) + 1) * multipleOf;
+    }
+
+    @Test
+    public void testIntArrayGrowability() throws Exception
+    {
+        final int BATCH_SIZE = 10;
+        IntArrayList list = new IntArrayList(BATCH_SIZE);
+
+        final int MINUS_FOUR = -4;
+        list.setDefaultValue(MINUS_FOUR);
+
+        // ensure that it can hold 25 elements
+        final int INITIAL_SIZE = 25;
+        list.ensureCapacity(INITIAL_SIZE);
+        Assert.assertEquals(list.capacity(), upperBound(INITIAL_SIZE, BATCH_SIZE));
+
+        // test that all 25 elements are set to default value
+        for (int i = 0; i < INITIAL_SIZE; i++)
+        {
+            Assert.assertEquals(list.getInt(i), MINUS_FOUR);
+        }
+
+        // update values for some elements
+        final int NEW_VALUE = 3;
+        for (int i = 0; i < 10; i++)
+        {
+            list.updateInt(i, NEW_VALUE);
+        }
+
+        // test
+        for (int i = 0; i < 25; i++)
+        {
+            Assert.assertEquals(list.getInt(i), i < 10 ? NEW_VALUE : MINUS_FOUR);
+        }
+
+        // resize
+        final int INCREASED_SIZE = 39;
+        list.ensureCapacity(INCREASED_SIZE);
+        Assert.assertEquals(list.capacity(), upperBound(INCREASED_SIZE, BATCH_SIZE));
+
+        // test values are not affected by growing
+        for (int i = 0; i < INCREASED_SIZE; i++)
+        {
+            Assert.assertEquals(list.getInt(i), i < 10 ? NEW_VALUE : MINUS_FOUR);
+        }
+
+        // reset
+        final int RESET_SIZE = 12;
+        list.reset(RESET_SIZE);
+        Assert.assertEquals(list.capacity(), upperBound(RESET_SIZE, BATCH_SIZE));;
+
+        // test values are reset as well
+        for (int i = 0; i < RESET_SIZE; i++)
+        {
+            Assert.assertEquals(list.getInt(i), MINUS_FOUR);
+        }
+    }
+
     @Test
     public void testLongArrayListAddAndGet() throws Exception
     {

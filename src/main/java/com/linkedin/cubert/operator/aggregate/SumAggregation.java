@@ -25,7 +25,7 @@ import com.linkedin.cubert.utils.JsonUtils;
 public class SumAggregation extends AbstractAggregationFunction
 {
     @Override
-    public void resetState()
+    public void resetAggregateValues()
     {
         longAggVal = 0;
         doubleAggVal = 0;

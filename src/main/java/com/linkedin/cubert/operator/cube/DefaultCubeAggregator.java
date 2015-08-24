@@ -11,6 +11,7 @@
 
 package com.linkedin.cubert.operator.cube;
 
+import com.linkedin.cubert.memory.LongArrayList;
 import java.io.IOException;
 
 import org.apache.pig.backend.executionengine.ExecException;
@@ -41,7 +42,10 @@ public class DefaultCubeAggregator implements CubeAggregator
     protected static final Object dummyObject = new Object();
 
     // the array to store aggregated results for the value cuboids
-    protected long[] valueTable;
+    protected final LongArrayList valueTable;
+
+    // allocation size for cuboid store
+    private int size;
 
     // the value of the aggregate column in the input tuple
     protected Object currentValue;
@@ -61,6 +65,9 @@ public class DefaultCubeAggregator implements CubeAggregator
     public DefaultCubeAggregator(ValueAggregator aggregator)
     {
         this.aggregator = aggregator;
+
+        valueTable = new LongArrayList();
+        valueTable.setDefaultValue(aggregator.initialValue());
     }
 
     @Override
@@ -86,18 +93,17 @@ public class DefaultCubeAggregator implements CubeAggregator
     @Override
     public void allocate(int size)
     {
-        // allocate and initialize the long array
-        valueTable = new long[size];
-        for (int i = 0; i < size; i++)
-            valueTable[i] = aggregator.initialValue();
+        // delayed allocation
+        this.size = size;
     }
 
     @Override
     public void clear()
     {
-        int size = valueTable.length;
-        for (int i = 0; i < size; i++)
-            valueTable[i] = aggregator.initialValue();
+        valueTable.reset();
+
+        // allocate and initialize the long array
+        valueTable.ensureCapacity(size);
     }
 
     @Override
@@ -110,16 +116,16 @@ public class DefaultCubeAggregator implements CubeAggregator
     @Override
     public void aggregate(int index)
     {
-        if (currentValue == null)
-            return;
+        if (currentValue == null) return;
 
-        valueTable[index] = aggregator.aggregate(valueTable[index], currentValue);
+        valueTable.ensureCapacity(index);
+        valueTable.updateLong(index, aggregator.aggregate(valueTable.getLong(index), currentValue));
     }
 
     @Override
     public void outputTuple(Tuple outputTuple, int index) throws ExecException
     {
-        outputTuple.set(outIndex, aggregator.output(valueTable[index]));
+        outputTuple.set(outIndex, aggregator.output(valueTable.getLong(index)));
     }
 
     @Override

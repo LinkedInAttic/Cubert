@@ -34,7 +34,7 @@ import com.linkedin.cubert.operator.PreconditionException;
  * {@code getCacheFiles} method)</li>
  * </ul>
  * <p>
- * The UDF has access to the current block using the protected {@code getBlock} method.
+ * The UDF has access to the current block using the protected {@code setBlock} method.
  * <p>
  * Note: the {@code outputSchema} and {@code getCacheFiles} methods will be called at the
  * compile time, as well as the run time.
@@ -47,7 +47,12 @@ import com.linkedin.cubert.operator.PreconditionException;
  */
 public abstract class Function
 {
-    protected void setBlock(Block block)
+    /**
+     * Optionally override this method to perform setup operations.
+     *
+     * @param block
+     */
+    protected void setBlock(Block block) throws PreconditionException
     {
 
     }

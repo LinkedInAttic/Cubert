@@ -11,13 +11,13 @@
 
 package com.linkedin.cubert.memory;
 
-import java.nio.BufferOverflowException;
-import java.util.Iterator;
-
-import org.apache.commons.lang.NotImplementedException;
-
 import com.linkedin.cubert.operator.cube.DimensionKey;
 import com.linkedin.cubert.utils.Pair;
+import java.util.Iterator;
+import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 
 /**
  * 
@@ -37,19 +37,27 @@ import com.linkedin.cubert.utils.Pair;
 
 public class CompactHashTableBase
 {
-    private static int LOAD_FACTOR = 2;
-    private final int NUMBER_OF_HASHTABLE_ENTRIES;
-    private final int EXPECTED_VALUE_SIZE; // = 80 * 1024 * 1024; // serialized data array
-    private final int DEFAULT_VALUE = -1;
-    private int EXPECTED_SIZE = 0;
+    private static final Log LOG = LogFactory.getLog(CompactHashTableBase.class.getName());
 
-    private final int[] keyHashcodes; // hashcodes
-    private final int[] offsetToData; // offset to data array
-    private final int[] dimensionKeyArray; // where data is stored in int format
+    private static final int LOAD_FACTOR = 2;
+    private static final int BATCH_PCT = 10;
 
+    private static final Integer DEFAULT_VALUE = new Integer(-1);
+    private static final int GROWTH_TRACKER_SIZE = 10;
+
+    private final int expectedSize;
+
+    private final int keyHashtableBatchSize;
+    private final IntArrayList batchGrowthTracker;
+
+    private final IntArrayList keyHashcodes; // hashcodes
+    private final IntArrayList offsetToData; // offset to data array
+    private final IntArrayList dimensionKeyArray; // where data is stored in int format
     private int dimensionKeyLength = 0;
+
     private int dataArrayOffset = 0; // offset to dimensionKey offset
 
+    private int numberOfHashtableEntries;
     private int putCount = 0;
 
     private final Pair<Integer, Boolean> index = new Pair<Integer, Boolean>(-1, false);
@@ -57,24 +65,112 @@ public class CompactHashTableBase
     private final Pair<DimensionKey, Integer> entry =
             new Pair<DimensionKey, Integer>(null, null);
 
+    private final OffsetsIterator offsetsIterator = new OffsetsIterator();
+
+    // Iterator abstraction for offset polling.
+    class OffsetsIterator
+    {
+        private boolean first;
+        private int offset;
+        private int batchPos;
+
+        public void setSeedOffset(int offset)
+        {
+            // Always look for offset starting in the first growth bucket.
+            batchPos = 0;
+            this.offset = offset % batchGrowthTracker.getInt(batchPos);
+            first = true;
+        }
+
+        public int getNext()
+        {
+            if (first)
+            {
+                // method called for the first time.
+                first = false;
+                return offset;
+            }
+
+            // Increment offset
+            offset++;
+
+            if (offset == batchGrowthTracker.getInt(batchPos))
+            {
+                // Offset has hit the max count for current growth bucket.
+
+                boolean firstWrapAround = (batchPos == 0);
+                batchPos++;
+
+                if (firstWrapAround)
+                {
+                    // ONLY For the first wrap-around only allow looking at offset == 0.
+                    // TODO: optimize such that if initial offset was zero this condition can be skipped.
+
+                    offset = 0;
+                    return offset;
+                }
+
+                if (batchPos >= batchGrowthTracker.size())
+                {
+                    // Gone past the last growth bucket. Error!!
+                    throw new RuntimeException("Hashtable offset not found!");
+                }
+            }
+
+            return offset;
+        }
+    }
+
+    /**
+     * Note: size the hash table appropriately to fit in memory. Too small a hash table can affect runtime performance
+     * due to bucket conflicts.
+     *
+     * @param dimensionKeyLength
+     * @param expectedHTSize
+     */
     public CompactHashTableBase(int dimensionKeyLength, int expectedHTSize)
     {
         this.dimensionKeyLength = dimensionKeyLength;
 
-        EXPECTED_SIZE = expectedHTSize;
-        NUMBER_OF_HASHTABLE_ENTRIES = LOAD_FACTOR * EXPECTED_SIZE;
-        EXPECTED_VALUE_SIZE = dimensionKeyLength * EXPECTED_SIZE;
+        expectedSize = expectedHTSize;
+        numberOfHashtableEntries = baselineHashtableSize();
 
-        keyHashcodes = new int[NUMBER_OF_HASHTABLE_ENTRIES];
-        offsetToData = new int[NUMBER_OF_HASHTABLE_ENTRIES];
-        dimensionKeyArray = new int[EXPECTED_VALUE_SIZE];
+        int valueArraySize = dimensionKeyLength * expectedSize;
 
-        // initialize everything to -1
-        for (int i = 0; i < NUMBER_OF_HASHTABLE_ENTRIES; i++)
-        {
-            keyHashcodes[i] = DEFAULT_VALUE;
-            offsetToData[i] = DEFAULT_VALUE;
-        }
+        keyHashcodes = getGrowableArray(numberOfHashtableEntries, DEFAULT_VALUE);
+        offsetToData = getGrowableArray(numberOfHashtableEntries, DEFAULT_VALUE);
+        dimensionKeyArray = getGrowableArray(valueArraySize, null);
+
+        keyHashtableBatchSize = batchSize(numberOfHashtableEntries);
+
+        batchGrowthTracker = new IntArrayList(GROWTH_TRACKER_SIZE);
+        batchGrowthTracker.add(numberOfHashtableEntries); // initial size
+    }
+
+    private int baselineHashtableSize()
+    {
+        return LOAD_FACTOR * expectedSize;
+    }
+
+    private int batchSize(int baselineSize)
+    {
+        return (baselineSize * BATCH_PCT) / 100;
+    }
+
+    private IntArrayList getGrowableArray(int baselineSize, Integer defaultValue)
+    {
+        // Calculate size of each batch
+        int batch_size = batchSize(baselineSize);
+        IntArrayList growableArray = new IntArrayList(batch_size);
+
+        // [Optionally] Set default value of each element in the array
+        if (defaultValue != null)
+            growableArray.setDefaultValue(defaultValue.intValue());
+
+        // Ensure that array can hold baselineSize # of elements
+        growableArray.ensureCapacity(baselineSize);
+
+        return  growableArray;
     }
 
     class KeyIndexIterator implements Iterator<Pair<DimensionKey, Integer>>
@@ -126,11 +222,12 @@ public class CompactHashTableBase
         dataArrayOffset = 0;
         putCount = 0;
 
-        for (int i = 0; i < NUMBER_OF_HASHTABLE_ENTRIES; i++)
-        {
-            keyHashcodes[i] = DEFAULT_VALUE;
-            offsetToData[i] = DEFAULT_VALUE;
-        }
+        numberOfHashtableEntries = baselineHashtableSize();
+        keyHashcodes.reset(numberOfHashtableEntries);
+        offsetToData.reset(numberOfHashtableEntries);
+
+        batchGrowthTracker.reset(GROWTH_TRACKER_SIZE);
+        batchGrowthTracker.add(numberOfHashtableEntries);
     }
 
     private int getValidHashCode(DimensionKey key)
@@ -144,35 +241,58 @@ public class CompactHashTableBase
     // No need to have this pair any more
     public Pair<Integer, Boolean> lookupOrCreateIndex(DimensionKey key)
     {
-        if (putCount >= EXPECTED_SIZE)
-            throw new BufferOverflowException(); // "The hash table size has exceeded the expected size");
+        if (putCount >= numberOfHashtableEntries)
+        {
+            LOG.info("Bump size. putCount = " + putCount +
+                " currentSize = " + numberOfHashtableEntries +
+                " increase by = " + keyHashtableBatchSize);
 
-        int realIndex = -1;
+            numberOfHashtableEntries += keyHashtableBatchSize;
+
+            batchGrowthTracker.add(numberOfHashtableEntries); // track growth
+
+            keyHashcodes.ensureCapacity(numberOfHashtableEntries);
+            offsetToData.ensureCapacity(numberOfHashtableEntries);
+        }
 
         int hashcode = getValidHashCode(key);
-        int offset = hashcode % NUMBER_OF_HASHTABLE_ENTRIES;
+        offsetsIterator.setSeedOffset(hashcode);
 
-        while (keyHashcodes[offset] != DEFAULT_VALUE)
+        boolean isNewKey;
+        int offset;
+
+        // Look through offset enumerator to find empty / matching slot for key
+        while (true)
         {
-            if (keyHashcodes[offset] == hashcode
-                    && deserializedAndCompare(offsetToData[offset], key))
+            offset = offsetsIterator.getNext();
+
+            // Test: if the slot is empty
+            if (keyHashcodes.getInt(offset) == DEFAULT_VALUE)
+            {
+                // Key does not exist, else would have been found before empty slot
+                isNewKey = true;
                 break;
+            }
 
-            offset += 1;
-            offset = offset % NUMBER_OF_HASHTABLE_ENTRIES;
+            // Test: if key @ slot matches current key
+            if ((keyHashcodes.getInt(offset) == hashcode)
+                && deserializedAndCompare(offsetToData.getInt(offset), key))
+            {
+                // Key exists. Rewrite
+                isNewKey = false;
+                break;
+            }
         }
 
-        boolean isNewKey = false;
-        if (keyHashcodes[offset] != hashcode)
+        if (isNewKey)
         {
-            // this is new put
+            // new put.
             putCount++; // count of the unique number of keys;
-            isNewKey = true;
-            keyHashcodes[offset] = hashcode;
-            offsetToData[offset] = writeToStore(key);
+            keyHashcodes.updateInt(offset, hashcode);
+            offsetToData.updateInt(offset, writeToStore(key));
         }
 
-        realIndex = offsetToData[offset] / dimensionKeyLength;
+        int realIndex = offsetToData.getInt(offset) / dimensionKeyLength;
 
         index.setFirst(realIndex);
         index.setSecond(isNewKey);
@@ -186,8 +306,9 @@ public class CompactHashTableBase
 
         int[] dimArray = key.getArray();
 
+        dimensionKeyArray.ensureCapacity(dataArrayOffset + dimensionKeyLength);
         for (int i = 0; i < dimArray.length; i++)
-            dimensionKeyArray[dataArrayOffset++] = dimArray[i];
+            dimensionKeyArray.updateInt(dataArrayOffset++, dimArray[i]);
 
         return oldOffset;
     }
@@ -200,7 +321,7 @@ public class CompactHashTableBase
         int[] data = new int[len];
 
         for (int i = 0; i < len; i++)
-            data[i] = dimensionKeyArray[offset++];
+            data[i] = dimensionKeyArray.getInt(offset++);
         DimensionKey key = new DimensionKey(data);
 
         entry.setFirst(key);
@@ -217,7 +338,7 @@ public class CompactHashTableBase
             return false;
 
         for (int i = 0; i < tocompare.length; i++)
-            if (tocompare[i] != dimensionKeyArray[offset++])
+            if (tocompare[i] != dimensionKeyArray.getInt(offset++))
                 return false;
 
         return true;
@@ -227,45 +348,4 @@ public class CompactHashTableBase
     {
         return offset / dimensionKeyLength;
     }
-
-    // final class MyEntry<K, V> implements Map.Entry<K, V>
-    // {
-    // private K key;
-    // private V value;
-    //
-    // public MyEntry()
-    // {
-    // }
-    //
-    // public MyEntry(K key, V value)
-    // {
-    // this.key = key;
-    // this.value = value;
-    // }
-    //
-    // @Override
-    // public K getKey()
-    // {
-    // return key;
-    // }
-    //
-    // @Override
-    // public V getValue()
-    // {
-    // return value;
-    // }
-    //
-    // public void setKey(K key)
-    // {
-    // this.key = key;
-    // }
-    //
-    // @Override
-    // public V setValue(V value)
-    // {
-    // V old = this.value;
-    // this.value = value;
-    // return old;
-    // }
-    // }
 }

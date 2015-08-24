@@ -105,8 +105,8 @@ operator: noopOperator
 		;
 
 noopOperator: NOOP ID (ASSERT PARTITIONEDON partitionKeys=columns SORTEDON sortKeys=columns)?;
-encodeOperator: ENCODE ID on columns using (path | dictname=ID) (NULLS as nullas=ID)?;
-decodeOperator: DECODE ID on columns using (path | dictname=ID);
+encodeOperator: ENCODE ID on columns using (path | dictname=ID) (NULLS as nullas=ID)? (UNKNOWNS as n=INT)?;
+decodeOperator: DECODE ID on columns using (path | dictname=ID) (UNKNOWNS as unknownas=STRING)?;
 filterOperator: FILTER ID by expression;
 groupByOperator: GROUP ID by (ALL | columns) (AGGREGATES aggregateList)? (summaryRewriteClause) ?;
 joinOperator: JOIN (joinType)? ID by columns ',' ID by columns ;
@@ -193,9 +193,10 @@ cubePartitionedAdditiveAggFunction: '[' ID ',' ID ']';
 
 
 onCompletionTasks: ONCOMPLETION '{' (onCompletionTask ';')* '}';
-onCompletionTask: rmTask | mvTask | dumpTask | uriTask;
+onCompletionTask: rmTask | mvTask | mkdirTask | dumpTask | uriTask;
 rmTask: RM path+;
 mvTask: MV path path;
+mkdirTask: MKDIR path+;
 dumpTask: DUMP path;
 uriTask: uri path+;
 
@@ -255,6 +256,7 @@ uriFragment : ID
     | MAP
     | MAPPERS
     | MATCHING
+    | MKDIR
     | MULTIPASS
     | MV
     | NOOP
@@ -277,6 +279,7 @@ uriFragment : ID
     | TIMES
     | TOP
     | TUPLE
+    | UNKNOWNS
     | UNSPLITTABLE
     | USING
     | VALIDATE
@@ -336,6 +339,7 @@ LOADCACHED: 'LOAD-CACHED' | 'load-cached';
 MAP: 'MAP' | 'map';
 MAPPERS: 'MAPPERS' | 'mappers';
 MATCHING: 'MATCHING' | 'matching';
+MKDIR: 'MKDIR' | 'mkdir';
 MULTIPASS: 'MULTIPASS' | 'multipass';
 MV: 'MV' | 'mv';
 NOOP: 'NO_OP' | 'no_op';
@@ -359,6 +363,7 @@ TEE: 'TEE' | 'tee';
 TIMES: 'TIMES' | 'times';
 TOP: 'TOP' | 'top';
 TUPLE: 'TUPLE' | 'tuple';
+UNKNOWNS: 'UNKNOWNS' | 'unknowns';
 UNSPLITTABLE: 'UNSPLITTABLE' | 'unsplittable';
 USING: 'USING' | 'using';
 VALIDATE: 'VALIDATE' | 'validate';
@@ -381,7 +386,10 @@ BOOLEAN: 'true' | 'false';
 ID: LETTER (LETTER | Digit)* ;
 fragment LETTER : 'a'..'z'|'A'..'Z'|'_'  ;
 
-STRING : '"' ('\\"'|.)*? '"' ;
+STRING : SINGLE_QUOTED_STRING | DOUBLE_QUOTED_STRING ;
+SINGLE_QUOTED_STRING : '\'' QUOTE_ESCAPED_STRING '\'' ;
+DOUBLE_QUOTED_STRING : '"' QUOTE_ESCAPED_STRING '"' ;
+QUOTE_ESCAPED_STRING : ('\\"'|'\\\''|.)*? ;
 
 
 

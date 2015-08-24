@@ -12,6 +12,7 @@
 
 package com.linkedin.cubert.memory;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -82,6 +83,28 @@ public final class LongArrayList extends SegmentedArrayList
 
         size++;
     }
+
+    @Override
+    protected Object freshBatch(Object reuse)
+    {
+        long[] batch = (reuse != null) ? (long[]) (reuse) : new long[batchSize];
+
+        if (defaultValue != null)
+            Arrays.fill(batch, ((Long) defaultValue).longValue());
+
+        return batch;
+    }
+
+    public void updateLong(int location, long value)
+    {
+        int batch = location / batchSize;
+        if (batch >= list.size())
+            throw new RuntimeException("Specified update location is outside range. Use add API");
+
+        int index = location % batchSize;
+        list.get(batch)[index] = value;
+    }
+
 
     public long getLong(int pointer)
     {

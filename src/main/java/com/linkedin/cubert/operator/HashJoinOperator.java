@@ -11,19 +11,6 @@
 
 package com.linkedin.cubert.operator;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import org.apache.pig.backend.executionengine.ExecException;
-import org.apache.pig.data.Tuple;
-import org.apache.pig.data.TupleFactory;
-import org.codehaus.jackson.JsonNode;
-
 import com.linkedin.cubert.block.Block;
 import com.linkedin.cubert.block.BlockProperties;
 import com.linkedin.cubert.block.BlockSchema;
@@ -35,6 +22,19 @@ import com.linkedin.cubert.utils.MemoryStats;
 import com.linkedin.cubert.utils.SerializedTupleStore;
 import com.linkedin.cubert.utils.TupleStore;
 import com.linkedin.cubert.utils.print;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.pig.backend.executionengine.ExecException;
+import org.apache.pig.data.Tuple;
+import org.apache.pig.data.TupleFactory;
+import org.codehaus.jackson.JsonNode;
+
 
 public class HashJoinOperator implements TupleOperator
 {
@@ -85,6 +85,7 @@ public class HashJoinOperator implements TupleOperator
     private static final String JOIN_TYPE_STR = "joinType";
     private static final String LEFT_OUTER_JOIN = "LEFT OUTER";
     private static final String RIGHT_OUTER_JOIN = "RIGHT OUTER";
+    private Counter outputTupleCounter;
 
     @Override
     public void setInput(Map<String, Block> input, JsonNode root, BlockProperties props) throws
@@ -173,10 +174,11 @@ public class HashJoinOperator implements TupleOperator
 
         MemoryStats.print("HASH JOIN OPERATOR after creating hashtable");
         long duration = System.currentTimeMillis() - startTime;
-        print.f("HashJoinOperator: createHashTable() for %d entries completed in %d ms",
-                rightBlockHashTable.size(),
-                duration);
+        print.f("HashJoinOperator: createHashTable() for %d entries completed in %d ms", rightBlockHashTable.size(),
+            duration);
         MemoryStats.printGCStats();
+
+        outputTupleCounter = CubertCounter.HASH_JOIN_OUTPUT_COUNTER.getCounter();
     }
 
     @Override
@@ -193,7 +195,7 @@ public class HashJoinOperator implements TupleOperator
             /* If there is no next tuple decrement the already incremented value */
             if (next == null) --outputCounter;
 
-            PhaseContext.getCounter("HASH JOIN OPERATOR", "# Output Tuples").increment(outputCounter);
+            outputTupleCounter.increment(outputCounter);
             outputCounter = 0;
         }
 

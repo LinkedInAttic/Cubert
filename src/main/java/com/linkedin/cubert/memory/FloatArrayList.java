@@ -1,9 +1,9 @@
 package com.linkedin.cubert.memory;
 
+import java.util.List;
+import org.apache.commons.lang.NotImplementedException;
 import org.roaringbitmap.RoaringBitmap;
 
-import java.util.BitSet;
-import java.util.List;
 
 /**
  * @author Maneesh Varshney
@@ -56,6 +56,17 @@ public class FloatArrayList extends SegmentedArrayList
     public int compareIndices(int i1, int i2)
     {
         return Float.compare(getFloat(i1), getFloat(i2));
+    }
+
+    /**
+     * NOTE: Currently not implemented. Use IntArrayList as reference when this array is used in growable mode.
+     * @param reuse
+     * @return
+     */
+    @Override
+    protected Object freshBatch(Object reuse)
+    {
+        throw new NotImplementedException();
     }
 
     /**

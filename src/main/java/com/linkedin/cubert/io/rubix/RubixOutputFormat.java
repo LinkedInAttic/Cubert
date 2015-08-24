@@ -31,7 +31,7 @@ public class RubixOutputFormat<K, V> extends FileOutputFormat<K, V>
             InterruptedException
     {
         Configuration conf = context.getConfiguration();
-        String extension = RubixConstants.RUBIX_EXTENSION;
+        String extension = RubixConstants.RUBIX_EXTENSION_FOR_WRITE;
 
         CompressionCodec codec = null;
         boolean isCompressed = getCompressOutput(context);

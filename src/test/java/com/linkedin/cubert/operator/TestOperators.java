@@ -11,15 +11,20 @@
 
 package com.linkedin.cubert.operator;
 
+import com.linkedin.cubert.block.Block;
+import com.linkedin.cubert.block.BlockProperties;
+import com.linkedin.cubert.block.BlockSchema;
+import com.linkedin.cubert.block.TupleOperatorBlock;
+import com.linkedin.cubert.plan.physical.CubertStrings;
+import com.linkedin.cubert.plan.physical.TestContext;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.MapContext;
+import org.apache.hadoop.mapreduce.ReduceContext;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.JsonMappingException;
@@ -29,20 +34,6 @@ import org.codehaus.jackson.node.ObjectNode;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
-
-import com.linkedin.cubert.block.Block;
-import com.linkedin.cubert.block.BlockProperties;
-import com.linkedin.cubert.block.BlockSchema;
-import com.linkedin.cubert.block.TupleOperatorBlock;
-import com.linkedin.cubert.operator.CombineOperator;
-import com.linkedin.cubert.operator.DictionaryEncodeOperator;
-import com.linkedin.cubert.operator.GroupByOperator;
-import com.linkedin.cubert.operator.HashJoinOperator;
-import com.linkedin.cubert.operator.MergeJoinOperator;
-import com.linkedin.cubert.operator.PhaseContext;
-import com.linkedin.cubert.operator.SortOperator;
-import com.linkedin.cubert.operator.TupleOperator;
-import com.linkedin.cubert.plan.physical.CubertStrings;
 
 public class TestOperators
 {
@@ -61,8 +52,8 @@ public class TestOperators
         Configuration conf = new JobConf();
         conf.setBoolean(CubertStrings.USE_COMPACT_SERIALIZATION, false);
 
-        PhaseContext.create((Mapper.Context) null, conf);
-        PhaseContext.create((Reducer.Context) null, conf);
+        PhaseContext.create((MapContext) new TestContext(), conf);
+        PhaseContext.create((ReduceContext) new TestContext(), conf);
     }
 
     public void testDictionaryEncoding() throws IOException,
@@ -1108,6 +1099,64 @@ public class TestOperators
         ArrayBlock.assertData(output, new Object[][] { { 0, 0 }, { 2, 7 }, { 5, 6 },
                 { 10, 1 }, { 100, 10 } }, new String[] { "a", "sum" });
     }
+
+    @Test
+    public void testGroupByWithNullInputs() throws JsonGenerationException,
+                                             JsonMappingException,
+                                             IOException,
+                                             InterruptedException
+    {
+        Object[][] rows1 =
+            {{0, 0}, {1, null}, {2, 2}, {2, 5}, {2, null}, {3, null}, {3, null}, {3, null}, {5, 6},
+                {8, null}, {8, null}, {8, null}, {8, 0}, {8, null}, {10, 1}, {18, 0}, {18, null}, {18, 0}, {18, null}, {100, 10}};
+        Block block = new ArrayBlock(Arrays.asList(rows1), new String[] { "a", "b" }, 1);
+
+        TupleOperator operator = new GroupByOperator();
+        Map<String, Block> input = new HashMap<String, Block>();
+        input.put("first", block);
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        ObjectNode json = mapper.createObjectNode();
+        json.put("input", "first");
+        ArrayNode anode = mapper.createArrayNode();
+        anode.add("a");
+        json.put("groupBy", anode);
+        anode = mapper.createArrayNode();
+        ObjectNode onode = mapper.createObjectNode();
+        onode.put("type", "SUM");
+        onode.put("input", "b");
+        onode.put("output", "sum");
+        anode.add(onode);
+        onode = mapper.createObjectNode();
+        onode.put("type", "MIN");
+        onode.put("input", "b");
+        onode.put("output", "min");
+        anode.add(onode);onode = mapper.createObjectNode();
+        onode.put("type", "MAX");
+        onode.put("input", "b");
+        onode.put("output", "max");
+        anode.add(onode);
+        onode = mapper.createObjectNode();
+        onode.put("type", "COUNT");
+        onode.put("input", "b");
+        onode.put("output", "count");
+        anode.add(onode);
+        json.put("aggregates", anode);
+
+        BlockProperties props =
+            new BlockProperties(null,
+                new BlockSchema("INT a, INT sum, INT min, INT max, INT count"),
+                (BlockProperties) null);
+        operator.setInput(input, json, props);
+
+        Block output = new TupleOperatorBlock(operator, props);
+
+        ArrayBlock.assertData(output, new Object[][] { { 0, 0, 0, 0, 1 }, { 1, null, null, null, null, 0},
+            { 2, 7, 2, 5, 2}, {3, null, null, 0}, { 5, 6, 6, 6, 1},
+            {8, 0, 0, 0, 1}, { 10, 1 , 1, 1, 1}, {18, 0, 0, 0, 2}, { 100, 10, 10, 10, 1} }, new String[] { "a", "sum" });
+    }
+
 
     @Test
     public void testSortOperator() throws JsonGenerationException,

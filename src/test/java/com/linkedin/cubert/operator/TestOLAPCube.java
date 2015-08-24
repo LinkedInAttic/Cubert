@@ -11,12 +11,20 @@
 
 package com.linkedin.cubert.operator;
 
+import com.linkedin.cubert.block.Block;
+import com.linkedin.cubert.block.BlockProperties;
+import com.linkedin.cubert.block.BlockSchema;
+import com.linkedin.cubert.plan.physical.TestContext;
+import com.linkedin.cubert.utils.JsonUtils;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
-
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.MapContext;
+import org.apache.hadoop.mapreduce.ReduceContext;
 import org.apache.pig.data.Tuple;
 import org.codehaus.jackson.JsonGenerationException;
 import org.codehaus.jackson.map.JsonMappingException;
@@ -26,12 +34,6 @@ import org.codehaus.jackson.node.ObjectNode;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
-
-import com.linkedin.cubert.block.Block;
-import com.linkedin.cubert.block.BlockProperties;
-import com.linkedin.cubert.block.BlockSchema;
-import com.linkedin.cubert.operator.CubeOperator;
-import com.linkedin.cubert.utils.JsonUtils;
 
 /***
  * Tests for OLAP cube additive.
@@ -86,6 +88,10 @@ public class TestOLAPCube
         /** Step 2: Create json */
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode node = mapper.createObjectNode();
+
+        Configuration conf = new JobConf();
+        PhaseContext.create((MapContext) new TestContext(), conf);
+        PhaseContext.create((ReduceContext) new TestContext(), conf);
 
         // add aggregates into json
         ArrayNode measures = mapper.createArrayNode();

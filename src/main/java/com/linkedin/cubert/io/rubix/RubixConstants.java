@@ -14,7 +14,9 @@ package com.linkedin.cubert.io.rubix;
 public class RubixConstants
 {
     public static final int RUBIX_FILE_VERSION_NUMBER = 1;
-    public static final String RUBIX_EXTENSION_SUFFIX = "rubix";
-    public static final String RUBIX_EXTENSION = "." + RUBIX_EXTENSION_SUFFIX;
-    public static final String RUBIX_EXTENSION_FOR_GLOB = "*.rubix*";
+
+    private static final String RUBIX_EXTENSION_SUFFIX_BASE = "rubix";
+
+    public static final String RUBIX_EXTENSION_FOR_WRITE = "." + RUBIX_EXTENSION_SUFFIX_BASE;
+    public static final String RUBIX_EXTENSION_FOR_GLOB = "*." + RUBIX_EXTENSION_SUFFIX_BASE + "*";
 }

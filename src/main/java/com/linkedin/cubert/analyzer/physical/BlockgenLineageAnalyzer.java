@@ -11,15 +11,9 @@
 
 package com.linkedin.cubert.analyzer.physical;
 
-import static com.linkedin.cubert.utils.JsonUtils.getText;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
+import com.linkedin.cubert.io.rubix.RubixFile;
+import com.linkedin.cubert.operator.OperatorType;
+import com.linkedin.cubert.utils.JsonUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
@@ -27,11 +21,10 @@ import org.apache.pig.data.Tuple;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.node.ObjectNode;
 
-import com.linkedin.cubert.io.rubix.RubixConstants;
-import com.linkedin.cubert.io.rubix.RubixFile;
-import com.linkedin.cubert.operator.OperatorType;
-import com.linkedin.cubert.utils.CommonUtils;
-import com.linkedin.cubert.utils.JsonUtils;
+import java.io.IOException;
+import java.util.*;
+
+import static com.linkedin.cubert.utils.JsonUtils.getText;
 
 /**
  * Analyzes the lineage of blockgens across the different CubertStore datasets.
@@ -84,11 +77,10 @@ public class BlockgenLineageAnalyzer extends PhysicalPlanVisitor implements Plan
     private String getBlockgenId(String input) throws IOException,
             ClassNotFoundException
     {
-        Path afile =
-                CommonUtils.getAFileInPath(conf,
-                                           new Path(input),
-                                           RubixConstants.RUBIX_EXTENSION_SUFFIX);
+        Path path = new Path(input);
+        Path afile = RubixFile.getARubixFile(conf, path);
         RubixFile<Tuple, Object> rubixFile = new RubixFile<Tuple, Object>(conf, afile);
+
         return rubixFile.getBlockgenId();
     }
 
@@ -109,7 +101,7 @@ public class BlockgenLineageAnalyzer extends PhysicalPlanVisitor implements Plan
             path = JsonUtils.encodePath(pathJson);
 
         // blockgenId related
-        if (getText(json, "type").equals("RUBIX"))
+        if (getText(json, "type").equalsIgnoreCase("RUBIX"))
         {
             currentBlockgenId = this.blockgenIdMap.get(path);
             if (currentBlockgenId == null)
@@ -143,7 +135,7 @@ public class BlockgenLineageAnalyzer extends PhysicalPlanVisitor implements Plan
         }
         case CREATE_BLOCK:
         {
-            boolean isIndexed = getText(json, "blockgenType").equals("BY_INDEX");
+            boolean isIndexed = getText(json, "blockgenType").equalsIgnoreCase("BY_INDEX");
 
             if (isIndexed)
             {

@@ -46,6 +46,8 @@ public class Typecast extends Function
 
         switch (inputType)
         {
+        case BOOLEAN:
+            return castBoolean((Boolean) val);
         case DOUBLE:
         case FLOAT:
         case INT:
@@ -98,6 +100,28 @@ public class Typecast extends Function
         default:
             break;
         }
+        return null;
+    }
+
+    private Object castBoolean(Boolean val) {
+        if (val == null)
+            return null;
+
+        switch (outputType) {
+            case DOUBLE:
+                return val ? 1.0d : 0.0d;
+            case FLOAT:
+                return val ? 1.0f : 0.0f;
+            case INT:
+                return val ? 1 : 0;
+            case LONG:
+                return val ? 1L : 0L;
+            case STRING:
+                return val.toString();
+            default:
+                break;
+        }
+
         return null;
     }
 

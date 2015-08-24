@@ -1,0 +1,15 @@
+#!/bin/bash
+
+if [ $# == "0" ]; then
+  echo "Syntax: run_example cube|join|wordcount";
+  exit 1;
+fi
+
+if [ -z $CUBERT_HOME/examples/scripts/$1.cmr ]; then
+  echo "Unknown example. $1.cmr script not found.";
+  echo "Syntax: run_example cube|join|wordcount";
+  exit 1;
+fi
+
+echo "Running example [$1]";
+$CUBERT_HOME/bin/cubert $CUBERT_HOME/examples/scripts/$1.cmr;

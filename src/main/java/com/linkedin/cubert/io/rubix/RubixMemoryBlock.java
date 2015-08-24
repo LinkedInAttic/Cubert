@@ -31,6 +31,7 @@ import com.linkedin.cubert.io.CompactDeserializer;
 public class RubixMemoryBlock implements Block
 {
     private final BlockProperties props;
+    private final CompressionCodec codec;
     private RubixTupleCreator tupleCreator;
     private ByteBuffer byteBuffer;
     private final BlockSerializationType serializationType;
@@ -77,6 +78,7 @@ public class RubixMemoryBlock implements Block
             deserializer.open(codec.createInputStream(inputStream));
         }
         this.mark = this.currentTuplePosition = 0;
+        this.codec = codec;
     }
 
     @Override
@@ -112,6 +114,11 @@ public class RubixMemoryBlock implements Block
     public BlockSerializationType getSerializationType()
     {
         return serializationType;
+    }
+
+    public CompressionCodec getCodec()
+    {
+        return codec;
     }
 
     @Override

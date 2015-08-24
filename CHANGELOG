@@ -1,3 +1,29 @@
+Cubert v0.2.36
+--------------
+[NEW] Default build on Hadoop version 2.3.0
+[NEW] Support for parameters supplied through executor properties (with "param." prefix)
+[NEW] Encode and Decode operator: support for missing dictionary code
+[NEW] Support for avro schema evolution. Missing values in union fields padded with default (=null) at read.
+[NEW] MKDIR as a top level command in OnCompletion task
+[NEW] Support for pig style single quotes (in addition to double quotes) for string arguments
+[NEW] CreateBag aggregation function (UDF)
+[NEW] InFile UDF (added in previous version) to test presence. Added support for checking presence in specific column.
+[FEATURE] Resizable in-memory hash table used in Cube operator
+[FEATURE] Resizability support for all memory efficient primitive array lists
+[FEATURE] In-built typecast function can case input boolean values
+[FEATURE] variable String arg support for UDF declaration
+[FEATURE] REGISTER command supports loading jars from argument directory
+[FEATURE] Cubert specific hadoop counters reported for Cube, Merge- and Hash-Join operators
+[FEATURE] Runtime checks for duplicates found in dimension table un Reduce-Side Join operator
+[FEATURE] Support for compression specific extensions for RUBIX files
+[FEATURE] Compile time checks for duplicate (SORT/PARTITION) columns in shuffle statement
+[FEATURE] Deep copy support for tuples with all data types
+[BUG] Fixed case sensitivity in grammar for BLOCKGEN shuffle macros
+[BUG] Fixed min value in MIN (double) aggregator
+[BUG] Fixed aggregators to handle null values
+[BUG] Fixed dropped column schemas in ENCODE and DECODE operators
+[BUG] Merge Join operator: tuples with nested schema was not copied correctly
+
 Cubert v0.2.21
 --------------
 [NEW] In memory columnar store now supports new column types: float, short, dictionary encoded strings and bags.

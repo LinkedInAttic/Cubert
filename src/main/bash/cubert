@@ -1,0 +1,22 @@
+#!/bin/bash
+
+if [ -z "$HADOOP_HOME" ]; then
+  echo "HADOOP_HOME not defined";
+  exit 1;
+fi
+
+if [ -z "$CUBERT_HOME" ]; then
+  echo "CUBERT_HOME not defined";
+  exit 1;
+fi
+
+CUBERT_JAR=`echo $CUBERT_HOME/lib/cubert-*.jar`
+
+if [ -z "$CUBERT_JAR" ]; then
+  echo "CUBERT_JAR not found";
+  exit 1;
+fi
+
+export HADOOP_CLASSPATH=$HADOOP_CLASSPATH:$CUBERT_HOME/lib/*
+echo "Using HADOOP_CLASSPATH=$HADOOP_CLASSPATH"
+$HADOOP_HOME/bin/hadoop jar $CUBERT_JAR com.linkedin.cubert.ScriptExecutor $*

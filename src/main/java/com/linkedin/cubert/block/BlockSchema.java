@@ -112,7 +112,7 @@ public class BlockSchema
         Integer index = getIndexMap().get(columnName);
         if (index == null)
             throw new IllegalArgumentException("Column [" + columnName
-                    + "] is not part of schema");
+                    + "] is not part of schema : " + toString());
 
         return index;
     }

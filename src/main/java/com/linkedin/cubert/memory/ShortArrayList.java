@@ -13,6 +13,8 @@
 package com.linkedin.cubert.memory;
 
 import java.util.List;
+import org.apache.commons.lang.NotImplementedException;
+
 
 /** Resizable optimized storage for short integers.
  *
@@ -49,7 +51,18 @@ public final class ShortArrayList extends SegmentedArrayList
     @Override
     public int compareIndices(int i1, int i2)
     {
-        return getShort(i1) - getShort(i2);
+        return Short.compare(getShort(i1), getShort(i2));
+    }
+
+    /**
+     * NOTE: Currently not implemented. Use IntArrayList as reference when this array is used in growable mode.
+     * @param reuse
+     * @return
+     */
+    @Override
+    protected Object freshBatch(Object reuse)
+    {
+        throw new NotImplementedException();
     }
 
     public void addShort(short value)

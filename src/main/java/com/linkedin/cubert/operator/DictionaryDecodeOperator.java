@@ -45,6 +45,7 @@ public class DictionaryDecodeOperator implements TupleOperator
     private Block dataBlock;
     private Tuple decodedTuple;
     private int numColumns;
+    private String replaceUnknownCodes = null;
 
     @Override
     public void setInput(Map<String, Block> input, JsonNode json, BlockProperties props) throws IOException,
@@ -104,6 +105,10 @@ public class DictionaryDecodeOperator implements TupleOperator
             }
         }
 
+        if (json.has("replaceUnknownCodes"))
+        {
+            replaceUnknownCodes = JsonUtils.getText(json, "replaceUnknownCodes");
+        }
     }
 
     private BlockSchema generateSchema(Map<String, CodeDictionary> dictionaryMap,
@@ -170,8 +175,18 @@ public class DictionaryDecodeOperator implements TupleOperator
                     String val = dictionaries[i].getValueForCode(code);
 
                     if (val == null)
-                        throw new RuntimeException("code '" + code
+                    {
+                        if (replaceUnknownCodes == null)
+                        {
+                            throw new RuntimeException("code '" + code
                                 + "' is missing encoding in dictionary.");
+                        }
+                        else
+                        {
+                            val = replaceUnknownCodes;
+                        }
+                    }
+
                     decodedTuple.set(i, val);
                 }
             }
@@ -217,27 +232,23 @@ public class DictionaryDecodeOperator implements TupleOperator
 
         ColumnType[] columnTypes = new ColumnType[numColumns];
 
-        int i = 0;
-        for (ColumnType ct : inputSchema.getColumnTypes())
+        for (int i = 0; i < columnTypes.length; i++)
         {
-            ColumnType type = new ColumnType();
-            columnTypes[i] = type;
-
-            final String name = ct.getName();
-            type.setName(name);
+            ColumnType type;
+            final String name = inputSchema.getName(i);
 
             if (dictionaryMap.containsKey(name))
             {
-                // this column is decoded. Transform the schema
-                type.setType(DataType.STRING);
+                // this column is decoded. Transform schema
+                type = new ColumnType(name, DataType.STRING);
             }
             else
             {
-                // this column is not decoded. Keep the schema intact
-                type.setType(ct.getType());
-                type.setColumnSchema(ct.getColumnSchema());
+                // this column is not decoded. Reuse schema
+                type = inputSchema.getColumnType(i);
             }
-            i++;
+
+            columnTypes[i] = type;
         }
 
         BlockSchema schema = new BlockSchema(columnTypes);

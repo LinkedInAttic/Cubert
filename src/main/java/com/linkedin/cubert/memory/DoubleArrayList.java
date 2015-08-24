@@ -12,8 +12,9 @@
 
 package com.linkedin.cubert.memory;
 
-import java.util.ArrayList;
 import java.util.List;
+import org.apache.commons.lang.NotImplementedException;
+
 
 /**
  * A resizable list of doubles that does not box/unbox the values to Double objects.
@@ -21,9 +22,9 @@ import java.util.List;
  * This class supports a subset of methods from {@link java.util.List}:
  * <ul>
  * <li> {@link add} to add a value in the list</li>
- * 
+ *
  * <li> {@link clear} to reset the list.</li>
- * 
+ *
  * </ul>
  * <p>
  * This class is not thread-safe. Also the iterator is not safe against concurrent
@@ -68,6 +69,17 @@ public final class DoubleArrayList extends SegmentedArrayList
     public int compareIndices(int i1, int i2)
     {
         return Double.compare(getDouble(i1), getDouble(i2));
+    }
+
+    /**
+     * NOTE: Currently not implemented. Use IntArrayList as reference when this array is used in growable mode.
+     * @param reuse
+     * @return
+     */
+    @Override
+    protected Object freshBatch(Object reuse)
+    {
+        throw new NotImplementedException();
     }
 
     /**

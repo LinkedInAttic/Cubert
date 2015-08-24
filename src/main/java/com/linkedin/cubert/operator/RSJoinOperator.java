@@ -15,21 +15,24 @@ import com.linkedin.cubert.block.Block;
 import com.linkedin.cubert.block.BlockProperties;
 import com.linkedin.cubert.block.BlockSchema;
 import com.linkedin.cubert.block.PivotedBlock;
+import com.linkedin.cubert.utils.CommonUtils;
 import com.linkedin.cubert.utils.TupleUtils;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Map;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.codehaus.jackson.JsonNode;
 
-import java.io.IOException;
-import java.util.Map;
-
-import static com.linkedin.cubert.utils.JsonUtils.*;
+import static com.linkedin.cubert.utils.JsonUtils.asArray;
+import static com.linkedin.cubert.utils.JsonUtils.getText;
 
 /**
  * @author Maneesh Varshney
  */
 public class RSJoinOperator implements TupleOperator
 {
+    public static final String TAG_COLUMN = "___tag";
     private PivotedBlock pivotedBlock;
 
     private Joiner joiner;
@@ -71,6 +74,7 @@ public class RSJoinOperator implements TupleOperator
         private final Tuple rightTuple;
         private final Tuple output;
         private final boolean isLeftOuter;
+        private final String[] joinKeys;
         private Tuple leftTuple;
 
         public Joiner(PivotedBlock block, JsonNode json)
@@ -83,6 +87,7 @@ public class RSJoinOperator implements TupleOperator
             output = TupleFactory.getInstance().newTuple(schema.getNumColumns() - 1);
 
             isLeftOuter = (json.has("joinType") && getText(json, "joinType").equalsIgnoreCase("LEFT OUTER"));
+            joinKeys = asArray(json, "joinKeys");
         }
 
         void newPivot() throws IOException, InterruptedException
@@ -100,6 +105,41 @@ public class RSJoinOperator implements TupleOperator
 
                 // fetch the next row (this will be the row from left table)
                 tuple = block.next();
+
+                if (tuple != null && tuple.get(tagIndex).equals(0))
+                {
+                    //  found duplicate value in dimension table. Error out!
+
+                    BlockSchema schema = block.getProperties().getSchema();
+                    Map<String, Integer> indexMap = schema.getIndexMap();
+
+                    // exclude TAG_COLUMN
+                    String[] values1 = new String[indexMap.size() - 1];
+                    String[] values2 = new String[indexMap.size() - 1];
+                    String[] columns = new String[indexMap.size() - 1];
+
+                    int i = 0;
+                    for (Map.Entry<String, Integer> entry : indexMap.entrySet())
+                    {
+                        String columName =  entry.getKey();
+                        if (columName.equalsIgnoreCase(TAG_COLUMN))
+                        {
+                            continue;
+                        }
+
+                        columns[i] = columName;
+                        values1[i] = String.valueOf(rightTuple.get(entry.getValue()));
+                        values2[i] = String.valueOf(tuple.get(entry.getValue()));
+
+                        i++;
+                    }
+
+                    String message = String.format("Duplicate keys found in dimension table.\n\t%s\n\t%s",
+                        Arrays.toString(CommonUtils.zip(columns, values1, ":")),
+                        Arrays.toString(CommonUtils.zip(columns, values2, ":")));
+
+                    throw new RuntimeException(message);
+                }
             }
             else
             {
@@ -157,7 +197,7 @@ public class RSJoinOperator implements TupleOperator
         PostCondition preCondition = preConditions.values().iterator().next();
         BlockSchema schema = preCondition.getSchema();
         // remove the ___tag columns
-        BlockSchema outputSchema = schema.getComplementSubset(new String[]{"___tag"});
+        BlockSchema outputSchema = schema.getComplementSubset(new String[]{TAG_COLUMN});
 
         return new PostCondition(outputSchema, preCondition.getPartitionKeys(), preCondition.getSortKeys());
     }

@@ -11,6 +11,7 @@
 
 package com.linkedin.cubert.memory;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -19,9 +20,9 @@ import java.util.List;
  * This class supports a subset of methods from {@link java.util.List}:
  * <ul>
  * <li> {@link add} to add a value in the list</li>
- * 
+ *
  * <li> {@link clear} to reset the list.</li>
- * 
+ *
  * <li> {@link iterator} to obtain an {@link IntIterator} for values.</li>
  * </ul>
  * <p>
@@ -52,6 +53,17 @@ public final class IntArrayList extends SegmentedArrayList
         list = (List) super.list;
     }
 
+    public void setDefaultValue(Integer defaultValue)
+    {
+        if (defaultValue == null)
+            return;
+
+        if (! (defaultValue instanceof  Integer))
+            throw new RuntimeException("Non Integer used as default value for " + IntArrayList.class.getCanonicalName());
+
+        super.setDefaultValue(defaultValue);
+    }
+
     @Override
     public void add(Object value)
     {
@@ -74,20 +86,41 @@ public final class IntArrayList extends SegmentedArrayList
 
     /**
      * Add an integer value to the list.
-     * 
+     *
      * @param value
      *            the value to add to list
      */
     public void addInt(int value)
     {
-        int batch = size / batchSize;
-        while (batch >= list.size())
-            list.add(new int[batchSize]);
+        ensureCapacity(size);
 
         int index = size % batchSize;
+        int batch = size / batchSize;
+
         list.get(batch)[index] = value;
 
         size++;
+    }
+
+    @Override
+    protected Object freshBatch(Object reuse)
+    {
+        int[] batch = (reuse != null) ? ((int[]) reuse) : new int[batchSize];
+
+        if (defaultValue != null)
+            Arrays.fill(batch, ((Integer) defaultValue).intValue());
+
+        return batch;
+    }
+
+    public void updateInt(int location, int value)
+    {
+        int batch = location / batchSize;
+        if (batch >= list.size())
+            throw new RuntimeException("Specified update location is outside range. Use add API");
+
+        int index = location % batchSize;
+        list.get(batch)[index] = value;
     }
 
     public int getInt(int pointer)
@@ -100,7 +133,7 @@ public final class IntArrayList extends SegmentedArrayList
 
     /**
      * Obtain an iterator for the list.
-     * 
+     *
      * @return an iterator for the list
      */
     public IntIterator iterator()

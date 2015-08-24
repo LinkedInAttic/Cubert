@@ -128,13 +128,24 @@ public class FunctionFactory
         return null;
     }
 
+    /**
+     * This method mirrors org.apache.pig.impl.PigContext.instantiateFuncFromSpec(org.apache.pig.FuncSpec)
+     *
+     * Supports 3 types of UDF constructors
+     *   1. No arguments
+     *   2. Mixed type argument. Must match UDF signature exactly.
+     *   3. "String ... args" variable length String arguments.
+     */
     public static Object createFunctionObject(String name, JsonNode constructorArgs)
     {
         try
         {
             Class<?> cls = ClassCache.forName(name);
             if (constructorArgs == null || constructorArgs.isNull())
+            {
+                // No argument constructor
                 return cls.newInstance();
+            }
 
             Object[] args = new Object[constructorArgs.size()];
             Class<?>[] argClasses = new Class[args.length];
@@ -144,7 +155,20 @@ public class FunctionFactory
                 argClasses[i] = args[i].getClass();
             }
 
-            return cls.getConstructor(argClasses).newInstance(args);
+            try
+            {
+                // Normal instantiation
+                return cls.getConstructor(argClasses).newInstance(args);
+            }
+            catch (NoSuchMethodException e) {
+                // Varargs instantiation for when the constructor uses String[]
+                String[] stringArgs = new String[args.length];
+                for (int i = 0; i < args.length; i++) {
+                    stringArgs[i] = args[i].toString();
+                }
+                Object[] wrappedArgs = new Object[]{stringArgs};
+                return cls.getConstructor(String[].class).newInstance(wrappedArgs);
+            }
         }
         catch (Exception e)
         {

@@ -91,7 +91,7 @@ public class LazyTuple implements Tuple
     @Override
     public boolean isNull(int fieldNum) throws ExecException
     {
-        throw new UnsupportedOperationException();
+        return get(fieldNum) == null;
     }
 
     @Override

@@ -1,5 +1,7 @@
 PROGRAM "Word Count";
 
+SET overwrite true;
+
 JOB "count words"
 	REDUCERS 5;
 	MAP {

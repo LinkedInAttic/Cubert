@@ -25,10 +25,10 @@ import com.linkedin.cubert.utils.JsonUtils;
 public class MaxAggregation extends AbstractAggregationFunction
 {
     @Override
-    public void resetState()
+    public void resetAggregateValues()
     {
         longAggVal = Long.MIN_VALUE;
-        doubleAggVal = Double.MIN_VALUE;
+        doubleAggVal = Double.NEGATIVE_INFINITY;
     }
 
     @Override

@@ -12,7 +12,6 @@
 package com.linkedin.cubert.block;
 
 import com.linkedin.cubert.io.BlockSerializationType;
-import com.linkedin.cubert.io.rubix.RubixConstants;
 import com.linkedin.cubert.io.rubix.RubixFile;
 import com.linkedin.cubert.io.rubix.RubixFile.KeyData;
 import java.io.IOException;
@@ -54,9 +53,7 @@ public class Index implements Serializable
     {
         Index index = new Index();
 
-        Path globPath =
-                new Path(new Path(rootdir), RubixConstants.RUBIX_EXTENSION_FOR_GLOB);
-        FileStatus[] allFiles = FileSystem.get(conf).globStatus(globPath);
+        FileStatus[] allFiles = RubixFile.getRubixFiles(new Path(rootdir), FileSystem.get(conf));
 
         boolean first = true;
         for (FileStatus status : allFiles)
